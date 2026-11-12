@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareHref, parseCompareIds, serializeCompareIds } from "@/lib/compare-url";
+import { compareHref, countRawIds, parseCompareIds, serializeCompareIds } from "@/lib/compare-url";
 
 const known = new Set(["openai/gpt-6.1-terra", "deepseek/deepseek-v4.1-flash-uncensored", "a/one", "b/two", "c/three", "x/free:free"]);
 
@@ -23,6 +23,13 @@ describe("parseCompareIds", () => {
   it("handles missing and array input", () => {
     expect(parseCompareIds(undefined)).toEqual([]);
     expect(parseCompareIds(["a/one", "b/two"], known)).toEqual(["a/one", "b/two"]);
+  });
+});
+
+describe("countRawIds", () => {
+  it("counts non-empty entries so skipped ids can be reported", () => {
+    expect(countRawIds("a/one,, ,bad,a/one")).toBe(3);
+    expect(countRawIds(undefined)).toBe(0);
   });
 });
 

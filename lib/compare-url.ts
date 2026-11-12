@@ -27,6 +27,12 @@ export function parseCompareIds(
   return ids;
 }
 
+/** Number of non-empty entries in the raw param, to tell the user how many were skipped. */
+export function countRawIds(raw: string | string[] | null | undefined): number {
+  const value = Array.isArray(raw) ? raw.join(",") : (raw ?? "");
+  return value.split(",").filter((part) => part.trim() !== "").length;
+}
+
 /**
  * Commas separate ids, so they are the only thing that must not appear raw.
  * Slashes and colons are left readable, matching the brief's example URL.

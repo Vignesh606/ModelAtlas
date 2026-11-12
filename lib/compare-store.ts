@@ -77,6 +77,13 @@ export function removeCompareItem(id: string) {
   write(read().filter((i) => i.id !== id));
 }
 
+/** Replaces the whole list (used by /compare to keep the tray in sync with the URL). */
+export function setCompareItems(items: CompareItem[]) {
+  const current = read();
+  const same = current.length === items.length && current.every((item, i) => item.id === items[i]?.id);
+  if (!same) write(items.slice(0, MAX_COMPARE));
+}
+
 export function clearCompareItems() {
   write([]);
 }
