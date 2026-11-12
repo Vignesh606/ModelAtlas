@@ -3,7 +3,7 @@ import { CHAT_LIMITS, chatRequestSchema, type ChatEvent } from "@/lib/chat";
 import { mapUpstreamError } from "@/lib/chat-errors";
 import { createChatStream, type CompletionRecord } from "@/lib/chat-stream";
 import { projectMonthlyCost } from "@/lib/cost";
-import { parseProviderModels, pickDefaultModel } from "@/lib/playground";
+import { orderModels, parseProviderModels, pickDefaultModel } from "@/lib/playground";
 import { isValidKey } from "@/lib/providers";
 import { checkRateLimit, resetRateLimits } from "@/lib/rate-limit";
 import { getSampleModels } from "@/lib/sample-data";
@@ -49,8 +49,8 @@ describe("chatRequestSchema", () => {
     expect(chatRequestSchema.safeParse(body).success).toBe(false);
   });
 
-  it("defaults the provider to OpenRouter and rejects unknown providers", () => {
-    expect(chatRequestSchema.parse(valid).provider).toBe("openrouter");
+  it("defaults the provider to Gemini and rejects unknown providers", () => {
+    expect(chatRequestSchema.parse(valid).provider).toBe("gemini");
     expect(chatRequestSchema.safeParse({ ...valid, provider: "evil" }).success).toBe(false);
   });
 
@@ -97,7 +97,7 @@ describe("mapUpstreamError", () => {
   });
 
   it("tailors the 401 message to whose key failed", () => {
-    expect(mapUpstreamError(401, null, true).message).toContain("Your OpenRouter API key");
+    expect(mapUpstreamError(401, null, true).message).toContain("Your Google API key");
     expect(mapUpstreamError(401, null, false).message).toContain("server's");
     expect(mapUpstreamError(401, null, true, "Groq").message).toContain("Your Groq API key");
   });
@@ -238,5 +238,18 @@ describe("pickDefaultModel", () => {
   it("falls back to any model when none are free", () => {
     expect(pickDefaultModel([terra!])?.id).toBe("openai/gpt-6.1-terra");
     expect(pickDefaultModel([])).toBeUndefined();
+  });
+});
+
+describe("orderModels", () => {
+  it("puts configured provider models first (with defaultModel at the top) before catalog models", () => {
+    const geminiModels = parseProviderModels("gemini", {
+      data: [{ id: "models/gemini-2.0-flash" }, { id: "models/gemini-2.5-flash" }],
+    });
+    const catalogModels = [
+      { ...geminiModels[0]!, id: "openai/gpt-4o", upstreamId: "openai/gpt-4o", provider: "openrouter" as const, name: "GPT-4o" },
+    ];
+    const ordered = orderModels(geminiModels, catalogModels, ["gemini"]);
+    expect(ordered.map((m) => m.id)).toEqual(["gemini:gemini-2.5-flash", "gemini:gemini-2.0-flash", "openai/gpt-4o"]);
   });
 });

@@ -9,15 +9,25 @@ import { isValidKey, type ProviderId } from "@/lib/providers";
  *
  * Variables are optional at build time so CI can build without secrets;
  * features that need one check for it at request time and return a clear error.
+ *
+ * Google Gemini is the primary/default provider. Other providers (including
+ * OpenRouter) are optional and activated by adding their API key.
  */
 const envSchema = z.object({
+  /** Primary API key: Google Gemini (AI Studio). */
+  GEMINI_API_KEY: z.string().trim().min(10, "GEMINI_API_KEY looks too short").optional(),
+  /** Optional override for the playground's default model id. */
+  GEMINI_DEFAULT_MODEL: z.string().trim().min(3).optional(),
+
+  /** Optional OpenRouter key. With it, OpenRouter models load automatically. */
   OPENROUTER_API_KEY: z
     .string()
     .trim()
     .regex(/^sk-or-/, "OPENROUTER_API_KEY should start with sk-or-")
     .optional(),
-  /** Optional override for the playground's default model id. */
+  /** Optional override for the playground's default OpenRouter model id. */
   OPENROUTER_DEFAULT_MODEL: z.string().trim().min(3).optional(),
+
   /** Postgres connection string (Neon). Without it, request history is disabled. */
   DATABASE_URL: z
     .string()
@@ -32,6 +42,8 @@ export type ServerEnv = z.infer<typeof envSchema>;
 function readRawEnv(): Record<string, string | undefined> {
   const pick = (name: string) => process.env[name]?.trim() || undefined;
   return {
+    GEMINI_API_KEY: pick("GEMINI_API_KEY") ?? pick("GOOGLE_API_KEY") ?? pick("google_ai_studio_api") ?? pick("GOOGLE_AI_STUDIO_API"),
+    GEMINI_DEFAULT_MODEL: pick("GEMINI_DEFAULT_MODEL"),
     OPENROUTER_API_KEY: pick("OPENROUTER_API_KEY"),
     OPENROUTER_DEFAULT_MODEL: pick("OPENROUTER_DEFAULT_MODEL"),
     DATABASE_URL: pick("DATABASE_URL"),
@@ -58,13 +70,16 @@ export function getServerEnv(): { env: ServerEnv; problems: string[] } {
 }
 
 /**
- * Server-side key for a provider, if the deployment has one: OPENROUTER_API_KEY,
- * or <PROVIDER>_API_KEY for the others (e.g. GEMINI_API_KEY; GOOGLE_API_KEY and
- * google_ai_studio_api also work for Gemini). Malformed keys count as missing.
+ * Server-side key for a provider, if the deployment has one.
+ * Gemini reads from the validated GEMINI_API_KEY env (already resolved from
+ * GEMINI_API_KEY / GOOGLE_API_KEY / google_ai_studio_api). OpenRouter reads
+ * OPENROUTER_API_KEY. Others read <PROVIDER>_API_KEY.
+ * Malformed keys count as missing.
  */
 export function serverKeyFor(provider: ProviderId): string | undefined {
+  if (provider === "gemini") return getServerEnv().env.GEMINI_API_KEY;
   if (provider === "openrouter") return getServerEnv().env.OPENROUTER_API_KEY;
-  const names = provider === "gemini" ? ["GEMINI_API_KEY", "GOOGLE_API_KEY", "google_ai_studio_api", "GOOGLE_AI_STUDIO_API"] : [`${provider.toUpperCase()}_API_KEY`];
+  const names = [`${provider.toUpperCase()}_API_KEY`];
   for (const name of names) {
     const key = process.env[name]?.trim();
     if (key && isValidKey(provider, key)) return key;

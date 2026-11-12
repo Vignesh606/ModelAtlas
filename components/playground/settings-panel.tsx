@@ -23,7 +23,6 @@ export function SettingsPanel({
   keys,
   onKeyChange,
   onModelsLoaded,
-  serverHasKey,
   serverProviders,
 }: {
   models: ChatModel[];
@@ -32,7 +31,6 @@ export function SettingsPanel({
   keys: Partial<Record<ProviderId, string>>;
   onKeyChange: (provider: ProviderId, key: string) => void;
   onModelsLoaded: (provider: ProviderId, models: ChatModel[]) => void;
-  serverHasKey: boolean;
   serverProviders: ProviderId[];
 }) {
   const id = useId();
@@ -150,30 +148,28 @@ export function SettingsPanel({
         </div>
       </Card>
 
-      <ProviderKeys keys={keys} onKeyChange={onKeyChange} onModelsLoaded={onModelsLoaded} serverHasKey={serverHasKey} serverProviders={serverProviders} />
+      <ProviderKeys keys={keys} onKeyChange={onKeyChange} onModelsLoaded={onModelsLoaded} serverProviders={serverProviders} />
     </div>
   );
 }
 
 /**
- * Pick a provider, paste its key, and (for non-OpenRouter providers) load the
- * models that key can use. Loaded models appear in the model switcher.
+ * Pick a provider, paste its key, and (for providers other than the default)
+ * load the models that key can use. Loaded models appear in the model switcher.
  */
 function ProviderKeys({
   keys,
   onKeyChange,
   onModelsLoaded,
-  serverHasKey,
   serverProviders,
 }: {
   keys: Partial<Record<ProviderId, string>>;
   onKeyChange: (provider: ProviderId, key: string) => void;
   onModelsLoaded: (provider: ProviderId, models: ChatModel[]) => void;
-  serverHasKey: boolean;
   serverProviders: ProviderId[];
 }) {
   const id = useId();
-  const [provider, setProvider] = useState<ProviderId>("openrouter");
+  const [provider, setProvider] = useState<ProviderId>("gemini");
   const [showKey, setShowKey] = useState(false);
   const [status, setStatus] = useState<{ loading: boolean; message: string }>({ loading: false, message: "" });
   const { name, keyHint } = PROVIDERS[provider];
@@ -243,24 +239,18 @@ function ProviderKeys({
           {showKey ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
         </button>
       </div>
-      {provider !== "openrouter" ? (
-        <Button variant="secondary" size="sm" className="mt-2" onClick={loadModels} disabled={(!key && !serverHasProviderKey) || status.loading}>
-          Load models
-        </Button>
-      ) : null}
+      <Button variant="secondary" size="sm" className="mt-2" onClick={loadModels} disabled={(!key && !serverHasProviderKey) || status.loading}>
+        Load models
+      </Button>
       {status.message ? (
         <p role="status" className="mt-2 text-xs">
           {status.message}
         </p>
       ) : null}
       <p className="mt-2 text-xs text-muted">
-        {provider !== "openrouter"
-          ? serverHasProviderKey
-            ? `${name} models are ready via the shared key; paste your own key to use yours instead. `
-            : `Paste your ${name} key, then load its models. `
-          : serverHasKey
-            ? "Leave empty to use the shared key (free models). "
-            : "Required: this deployment has no shared key. "}
+        {serverHasProviderKey
+          ? `${name} models are ready via the shared key; paste your own key to use yours instead. `
+          : `Paste your ${name} key, then load its models. `}
         Keys stay in this tab&apos;s memory, are sent only with your requests, and are never stored or logged.
       </p>
     </Card>

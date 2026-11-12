@@ -1,14 +1,14 @@
 /*
  * Chat providers. All of them speak the OpenAI-compatible /chat/completions
- * API, so one code path serves every provider. OpenRouter is the catalog
- * source; for the others the user brings a key and we list their /models.
+ * API, so one code path serves every provider. Google Gemini is the primary
+ * default; the others are optional and activated by adding their API key.
  */
 
 export const PROVIDER_IDS = [
+  "gemini",
   "openrouter",
   "openai",
   "anthropic",
-  "gemini",
   "groq",
   "deepseek",
   "mistral",
@@ -54,7 +54,8 @@ export function authHeaders(provider: ProviderId, key: string): Record<string, s
   return headers;
 }
 
-/** Keys are header values: no spaces or odd characters. OpenRouter keys are checked strictly. */
+/** Keys are header values: no spaces or odd characters. */
 export function isValidKey(provider: ProviderId, key: string): boolean {
-  return provider === "openrouter" ? /^sk-or-[A-Za-z0-9_-]{10,200}$/.test(key) : /^[A-Za-z0-9._-]{16,400}$/.test(key);
+  if (provider === "openrouter") return /^sk-or-[A-Za-z0-9_-]{10,200}$/.test(key);
+  return /^[A-Za-z0-9._-]{16,400}$/.test(key);
 }

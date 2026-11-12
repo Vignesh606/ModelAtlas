@@ -11,9 +11,10 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getOrCreateSessionId } from "@/lib/session";
 
 /**
- * POST /api/chat: validates the request, calls the chosen provider (OpenRouter
- * by default, or any preset in lib/providers.ts) with streaming, and
- * relays a normalized SSE stream (see lib/chat.ts for the contract).
+ * POST /api/chat: validates the request, calls the chosen provider (Google
+ * Gemini by default, or any provider configured in lib/providers.ts) with
+ * streaming, and relays a normalized SSE stream (see lib/chat.ts for the
+ * contract).
  *
  * Errors before streaming starts return { error: { code, message } } with a
  * real status code: 400 invalid, 401 bad key, 402 no credits, 429 rate limited,
@@ -68,8 +69,9 @@ export async function POST(request: NextRequest) {
   const { provider } = parsed.data;
   const providerName = PROVIDERS[provider].name;
 
-  // OpenRouter models must exist in the catalog (we know their parameters).
-  // Other providers' models were listed by the provider itself, so we trust the id.
+  // For OpenRouter models, validate they exist in the catalog (we know their parameters).
+  // For all other providers (including Gemini), we trust the model id since
+  // models were listed by the provider itself or are well-known defaults.
   let supportedParameters = ["temperature", "max_tokens"];
   if (provider === "openrouter") {
     const model = await getModel(parsed.data.model);
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
     supportedParameters = model.supportedParameters;
   }
-  // History id: catalog id for OpenRouter, "provider:model" otherwise.
+  // History id: "provider:model" for all providers, catalog id for OpenRouter.
   const historyModelId = provider === "openrouter" ? parsed.data.model : `${provider}:${parsed.data.model}`;
 
   // 3. Choose the key: the user's own (header) or the server's (env).
@@ -88,10 +90,7 @@ export async function POST(request: NextRequest) {
   }
   const apiKey = userKey ?? serverKeyFor(provider);
   if (!apiKey) {
-    const message =
-      provider === "openrouter"
-        ? "This model runs through OpenRouter, so it needs an OpenRouter key. To use another provider's key, choose that provider in Settings, click Load models, and pick one of its models."
-        : `Add your ${providerName} API key in Settings to use this model.`;
+    const message = `Add your ${providerName} API key in Settings to use this model.`;
     return apiError("unauthorized", message, 401);
   }
 
@@ -116,6 +115,7 @@ export async function POST(request: NextRequest) {
       headers: {
         ...authHeaders(provider, apiKey),
         "Content-Type": "application/json",
+        // OpenRouter likes an X-Title header for analytics.
         ...(provider === "openrouter" ? { "X-Title": "ModelAtlas" } : {}),
       },
       body: JSON.stringify(buildUpstreamBody(parsed.data, provider, supportedParameters)),

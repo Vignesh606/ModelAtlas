@@ -11,12 +11,11 @@ import { checkRateLimit } from "@/lib/rate-limit";
  * GET /api/provider-models?provider=openai  (optional key in the x-provider-key header)
  * -> { models: ChatModel[] }
  *
- * Lists the chat models a key can use on another provider: the user's key if
+ * Lists the chat models a key can use on a provider: the user's key if
  * sent, else the server's key for that provider. Keys go only to the
- * provider's fixed base URL and are never stored or logged. OpenRouter isn't
- * listed here: its models come from the catalog.
+ * provider's fixed base URL and are never stored or logged.
  */
-const querySchema = z.object({ provider: z.enum(PROVIDER_IDS).exclude(["openrouter"]) });
+const querySchema = z.object({ provider: z.enum(PROVIDER_IDS) });
 
 export async function GET(request: NextRequest) {
   const parsed = querySchema.safeParse({ provider: request.nextUrl.searchParams.get("provider") });

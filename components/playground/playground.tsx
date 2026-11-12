@@ -16,8 +16,7 @@ interface Props {
   initialModelId: string;
   /** Default model for the second pane in side-by-side mode. */
   secondModelId: string;
-  serverHasKey: boolean;
-  /** Other providers the server has its own key for (their models are already in `models`). */
+  /** Providers the server has its own key for (their models are already in `models`). */
   serverProviders: ProviderId[];
 }
 
@@ -27,10 +26,12 @@ interface Props {
  * are plain React state, so keys exist only in this tab's memory: no localStorage, no
  * cookie, gone on reload.
  */
-export function Playground({ models: catalogModels, initialModelId, secondModelId, serverHasKey, serverProviders }: Props) {
-  // Catalog (OpenRouter) models plus any loaded from providers the user connected.
+export function Playground({ models: catalogModels, initialModelId, secondModelId, serverProviders }: Props) {
+  // Models loaded from optional provider keys go at the top, followed by
+  // server-configured default provider models and catalog models.
   const [providerModels, setProviderModels] = useState<ChatModel[]>([]);
-  const models = [...catalogModels, ...providerModels];
+  const loadedProviders = new Set(providerModels.map((m) => m.provider));
+  const models = [...providerModels, ...catalogModels.filter((m) => !loadedProviders.has(m.provider))];
   const byId = new Map(models.map((m) => [m.id, m]));
   const fallback = models[0];
   const [modelA, setModelA] = useState<ChatModel | undefined>(byId.get(initialModelId) ?? fallback);
@@ -45,11 +46,11 @@ export function Playground({ models: catalogModels, initialModelId, secondModelI
   const chatB = useChat({ model: modelB ?? fallback!, settings, apiKey: keyFor(modelB) });
 
   /**
-   * Replaces this provider's models with a freshly loaded list and switches the
-   * first pane to one of them, so the next message uses the new key right away.
+   * Places this provider's freshly loaded models at the top of the list and
+   * switches the first pane to one of them, so the next message uses the new key right away.
    */
   const onModelsLoaded = (provider: ProviderId, loaded: ChatModel[]) => {
-    setProviderModels((all) => [...all.filter((m) => m.provider !== provider), ...loaded]);
+    setProviderModels((all) => [...loaded, ...all.filter((m) => m.provider !== provider)]);
     if (loaded[0] && modelA?.provider !== provider) setModelA(loaded[0]);
   };
 
@@ -128,7 +129,6 @@ export function Playground({ models: catalogModels, initialModelId, secondModelI
             keys={keys}
             onKeyChange={(provider, key) => setKeys((k) => ({ ...k, [provider]: key }))}
             onModelsLoaded={onModelsLoaded}
-            serverHasKey={serverHasKey}
             serverProviders={serverProviders}
           />
         </aside>

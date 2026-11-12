@@ -11,6 +11,7 @@ import type { Model, ModelSummary } from "@/lib/types";
  */
 export type ChatModel = ModelSummary & { supportedParameters: string[]; provider: ProviderId; upstreamId: string };
 
+/** Converts an OpenRouter catalog Model to a ChatModel. */
 export function toChatModel(model: Model): ChatModel {
   return { ...toSummary(model), supportedParameters: model.supportedParameters, provider: "openrouter", upstreamId: model.id };
 }
@@ -75,11 +76,19 @@ export function isChatModel(model: Model): boolean {
 }
 
 /**
- * Free models verified (2026-11-12) to answer ordinary chat requests. Some free
- * models carry restrictions the catalog doesn't expose (one top-scoring model
- * only accepts "agentic harness" traffic and returns 403), so ranking alone
- * isn't a safe default. `openrouter/free` routes to whichever free model is
- * available, the most resilient last resort.
+ * Default Gemini models that work out of the box with a Gemini API key.
+ * These are used when Gemini is the primary provider and no other API keys
+ * are configured. The first one found is selected as default.
+ */
+export const DEFAULT_GEMINI_MODELS = [
+  "gemini:gemini-2.5-flash",
+  "gemini:gemini-2.5-pro",
+  "gemini:gemini-2.0-flash",
+] as const;
+
+/**
+ * OpenRouter free model fallbacks, used only when OpenRouter is configured
+ * and the user hasn't set up any other provider.
  */
 export const DEFAULT_FREE_MODELS = [
   "nvidia/nemotron-3.5-super-vl:free",
@@ -88,14 +97,20 @@ export const DEFAULT_FREE_MODELS = [
 ] as const;
 
 /**
- * Default model: the first preferred id that exists in the catalog (env
- * override first, then DEFAULT_FREE_MODELS), otherwise the free model with the
- * best intelligence score (newest as a tie-break), so a first-time visitor can
- * chat at no cost. Free models change often, hence the fallback chain.
+ * Default model: picks the best model based on what's available.
+ *
+ * Priority:
+ * 1. Explicit preferred ids (env override, then built-in defaults)
+ * 2. Best-scoring free model (newest as tie-break)
+ * 3. Any available model
+ *
+ * Models from providers with configured API keys (server-keyed providers)
+ * appear at the top of the list so they're selected first when no explicit
+ * preference is given.
  */
 export function pickDefaultModel<T extends ModelSummary>(
   models: T[],
-  preferredIds: ReadonlyArray<string | undefined> = DEFAULT_FREE_MODELS,
+  preferredIds: ReadonlyArray<string | undefined> = DEFAULT_GEMINI_MODELS,
 ): T | undefined {
   for (const id of preferredIds) {
     const preferred = id ? models.find((m) => m.id === id) : undefined;
@@ -109,4 +124,30 @@ export function pickDefaultModel<T extends ModelSummary>(
     if (scoreDiff !== 0) return scoreDiff;
     return (b.releasedAt ?? "").localeCompare(a.releasedAt ?? "");
   })[0];
+}
+
+/**
+ * Orders models so that models from providers with configured API keys
+ * appear first, followed by catalog (OpenRouter) models. Within each group,
+ * the primary provider's models come first.
+ */
+export function orderModels(
+  providerModels: ChatModel[],
+  catalogModels: ChatModel[],
+  serverProviders: ProviderId[],
+): ChatModel[] {
+  // Provider models first (ordered by provider priority), then catalog models.
+  const providerOrder = new Map(serverProviders.map((p, i) => [p, i]));
+  const sortedProviderModels = [...providerModels].sort((a, b) => {
+    const aOrder = providerOrder.get(a.provider) ?? 999;
+    const bOrder = providerOrder.get(b.provider) ?? 999;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    const defaultId = PROVIDERS[a.provider].defaultModel;
+    if (defaultId) {
+      if (a.upstreamId === defaultId && b.upstreamId !== defaultId) return -1;
+      if (b.upstreamId === defaultId && a.upstreamId !== defaultId) return 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+  return [...sortedProviderModels, ...catalogModels];
 }

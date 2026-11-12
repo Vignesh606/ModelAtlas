@@ -5,7 +5,7 @@ import { PageIntro } from "@/components/page-intro";
 import { Playground } from "@/components/playground/playground";
 import { getCatalog } from "@/lib/data";
 import { getServerEnv, serverKeyFor } from "@/lib/env";
-import { DEFAULT_FREE_MODELS, isChatModel, pickDefaultModel, toChatModel, type ChatModel } from "@/lib/playground";
+import { DEFAULT_FREE_MODELS, DEFAULT_GEMINI_MODELS, isChatModel, orderModels, pickDefaultModel, toChatModel, type ChatModel } from "@/lib/playground";
 import { fetchProviderModels } from "@/lib/provider-models";
 import { PROVIDER_IDS, PROVIDERS, type ProviderId } from "@/lib/providers";
 
@@ -18,7 +18,7 @@ export default function PlaygroundPage({ searchParams }: PageProps<"/playground"
   return (
     <>
       <PageIntro title="AI Playground">
-        Chat with models from OpenRouter, Google and other providers, compare two side by side, and see tokens and projected cost for each reply.
+        Chat with AI models from Google, OpenRouter and other providers, compare two side by side, and see tokens and projected cost for each reply.
         API keys stay on the server. Prompts and replies are saved to your <Link href="/history" className="underline underline-offset-2 hover:text-fg">history</Link>,
         tied to this browser only.
       </PageIntro>
@@ -30,24 +30,45 @@ export default function PlaygroundPage({ searchParams }: PageProps<"/playground"
 }
 
 async function PlaygroundLoader({ searchParams }: { searchParams: PageProps<"/playground">["searchParams"] }) {
-  // Providers (other than OpenRouter) the server has its own key for, e.g. GEMINI_API_KEY.
-  const serverProviders = PROVIDER_IDS.filter((p) => p !== "openrouter" && serverKeyFor(p));
+  // Providers the server has its own key for. Gemini is checked first (primary),
+  // then all others (including OpenRouter) that have API keys configured.
+  const serverProviders = PROVIDER_IDS.filter((p) => serverKeyFor(p));
+
+  // Separate out which optional providers (non-Gemini) have server keys,
+  // and always try to load Gemini models if it has a key.
+  const providersToLoad = serverProviders.filter((p) => p !== "openrouter");
+
   const [catalog, params, ...loaded] = await Promise.all([
     getCatalog(),
     searchParams,
-    ...serverProviders.map((p) => fetchProviderModels(p, serverKeyFor(p)!, false)),
+    ...providersToLoad.map((p) => fetchProviderModels(p, serverKeyFor(p)!, false)),
   ]);
+
   // A provider that fails to list models is skipped; the catalog still works.
   const providerModels = loaded.flatMap((r) => ("models" in r ? r.models : []));
-  const models = [...providerModels, ...catalog.models.filter(isChatModel).map(toChatModel)];
+  const catalogModels = catalog.models.filter(isChatModel).map(toChatModel);
+
+  // Order models: models from configured providers first (Gemini at top if
+  // configured), then OpenRouter catalog models. If no optional API keys are
+  // configured at all, Gemini defaults appear at the top of the list.
+  const models = orderModels(providerModels, catalogModels, serverProviders);
 
   const requested = typeof params.model === "string" ? models.find((m) => m.id === params.model) : undefined;
-  // Server-keyed providers come first: their preferred model, else their first model,
-  // and only then the OpenRouter defaults.
+
+  // Build the preferred model chain:
+  // 1. Env overrides (GEMINI_DEFAULT_MODEL, OPENROUTER_DEFAULT_MODEL)
+  // 2. Server-keyed provider defaults (Gemini first, then others)
+  // 3. Built-in Gemini defaults
+  // 4. OpenRouter free model defaults
   const initial =
     requested ??
     pickProviderDefault(providerModels, serverProviders) ??
-    pickDefaultModel(models, [getServerEnv().env.OPENROUTER_DEFAULT_MODEL, ...DEFAULT_FREE_MODELS]);
+    pickDefaultModel(models, [
+      getServerEnv().env.GEMINI_DEFAULT_MODEL ? `gemini:${getServerEnv().env.GEMINI_DEFAULT_MODEL}` : undefined,
+      getServerEnv().env.OPENROUTER_DEFAULT_MODEL,
+      ...DEFAULT_GEMINI_MODELS,
+      ...DEFAULT_FREE_MODELS,
+    ]);
   const second = pickDefaultModel(models.filter((m) => m.id !== initial?.id));
 
   return (
@@ -57,7 +78,6 @@ async function PlaygroundLoader({ searchParams }: { searchParams: PageProps<"/pl
       models={models}
       initialModelId={initial?.id ?? ""}
       secondModelId={second?.id ?? initial?.id ?? ""}
-      serverHasKey={Boolean(serverKeyFor("openrouter"))}
       serverProviders={serverProviders}
     />
   );

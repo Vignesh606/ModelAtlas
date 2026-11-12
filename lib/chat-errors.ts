@@ -2,7 +2,7 @@ import type { ApiErrorCode } from "@/lib/api-error";
 
 /**
  * Maps a provider error status to our normalized error, with a message a
- * user can act on. Statuses follow OpenRouter's documented meanings:
+ * user can act on. Statuses follow common provider conventions:
  * 400 bad request, 401 bad key, 402 no credits, 403 moderation, 408 timeout,
  * 429 rate limited, 502 model down, 503 no provider available.
  */
@@ -10,7 +10,7 @@ export function mapUpstreamError(
   status: number,
   upstreamMessage: string | null,
   usingUserKey: boolean,
-  providerName = "OpenRouter",
+  providerName = "Google",
 ): { code: ApiErrorCode; status: number; message: string } {
   const detail = upstreamMessage ? ` (${upstreamMessage.slice(0, 200)})` : "";
   switch (status) {
@@ -40,20 +40,20 @@ export function mapUpstreamError(
     case 408:
       return { code: "timeout", status: 504, message: "The model took too long to respond. Try again." };
     case 429:
-      // A daily cap applies to every free model until it resets, so "try another model" wouldn't help.
+      // A daily cap applies to some free models until it resets.
       if (upstreamMessage && /per[-\s]?day/i.test(upstreamMessage)) {
         return {
           code: "rate_limited",
           status: 429,
           message: usingUserKey
-            ? "Your OpenRouter account has used today's free-model allowance. Add credits or try again tomorrow."
-            : "The shared key has used today's free-model allowance. Add your own OpenRouter key in Settings, or try again tomorrow.",
+            ? `Your ${providerName} account has used today's free-model allowance. Add credits or try again tomorrow.`
+            : `The shared key has used today's free-model allowance. Add your own API key in Settings, or try again tomorrow.`,
         };
       }
       return {
         code: "rate_limited",
         status: 429,
-        message: "This model is rate-limited right now (free models have tight limits). Wait a moment or try another model.",
+        message: "This model is rate-limited right now. Wait a moment or try another model.",
       };
     default:
       return {

@@ -31,8 +31,8 @@ const messageSchema = z.object({
 
 export const chatRequestSchema = z
   .object({
-    /** Which API to call: OpenRouter (the catalog) unless the user connected another provider. */
-    provider: z.enum(PROVIDER_IDS).default("openrouter"),
+    /** Which API to call: Google Gemini by default, or any other configured provider. */
+    provider: z.enum(PROVIDER_IDS).default("gemini"),
     /** The provider's own model id, e.g. "openai/gpt-4o" on OpenRouter or "gpt-4o" on OpenAI. */
     model: z.string().trim().min(2, "Choose a model.").max(200).regex(/^[\w.:/@-]+$/, "Invalid model id."),
     messages: z
