@@ -17,6 +17,12 @@ const envSchema = z.object({
     .optional(),
   /** Optional override for the playground's default model id. */
   OPENROUTER_DEFAULT_MODEL: z.string().trim().min(3).optional(),
+  /** Postgres connection string (Neon). Without it, request history is disabled. */
+  DATABASE_URL: z
+    .string()
+    .trim()
+    .regex(/^postgres(ql)?:\/\//, "DATABASE_URL should be a postgres:// or postgresql:// URL")
+    .optional(),
 });
 
 export type ServerEnv = z.infer<typeof envSchema>;
@@ -27,6 +33,7 @@ function readRawEnv(): Record<string, string | undefined> {
   return {
     OPENROUTER_API_KEY: pick("OPENROUTER_API_KEY"),
     OPENROUTER_DEFAULT_MODEL: pick("OPENROUTER_DEFAULT_MODEL"),
+    DATABASE_URL: pick("DATABASE_URL"),
   };
 }
 

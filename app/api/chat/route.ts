@@ -1,10 +1,11 @@
-import type { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { apiError } from "@/lib/api-error";
 import { USER_KEY_HEADER, chatRequestSchema, firstIssue, userKeySchema, type ChatRequest } from "@/lib/chat";
 import { mapUpstreamError, readUpstreamErrorMessage } from "@/lib/chat-errors";
-import { createChatStream } from "@/lib/chat-stream";
+import { createChatStream, type CompletionRecord } from "@/lib/chat-stream";
 import { getModel } from "@/lib/data";
 import { getServerEnv } from "@/lib/env";
+import { saveRequest, type SaveRequestInput } from "@/lib/history";
 import { OPENROUTER_BASE_URL } from "@/lib/openrouter";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getOrCreateSessionId } from "@/lib/session";
@@ -83,6 +84,15 @@ export async function POST(request: NextRequest) {
   const timeout = AbortSignal.timeout(UPSTREAM_TIMEOUT_MS);
   const signal = AbortSignal.any([request.signal, timeout]);
 
+  // History: every request that reaches a model is recorded (success, error or
+  // aborted). after() runs once the response has finished and keeps the
+  // serverless function alive until the write completes.
+  const prompt = parsed.data.messages.at(-1)?.content ?? "";
+  const record = (fields: Pick<SaveRequestInput, "response" | "usage" | "latencyMs" | "status" | "errorMessage">) =>
+    saveRequest({ sessionId, model: model.id, prompt, ...fields });
+  const recordFailure = (message: string) =>
+    after(() => record({ response: "", usage: null, latencyMs: Date.now() - startedAt, status: "error", errorMessage: message }));
+
   let upstream: Response;
   try {
     upstream = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
@@ -96,21 +106,37 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(buildUpstreamBody(parsed.data, model)),
     });
   } catch {
-    if (timeout.aborted) return apiError("timeout", "The model took too long to respond. Try again.", 504);
+    if (timeout.aborted) {
+      recordFailure("Timed out before the model responded.");
+      return apiError("timeout", "The model took too long to respond. Try again.", 504);
+    }
     if (request.signal.aborted) return new Response(null, { status: 499 }); // client closed request
+    recordFailure("Couldn't reach OpenRouter.");
     return apiError("upstream_error", "Couldn't reach OpenRouter. Try again in a moment.", 502);
   }
 
   if (!upstream.ok || !upstream.body) {
     const mapped = mapUpstreamError(upstream.status, await readUpstreamErrorMessage(upstream), Boolean(userKey));
+    recordFailure(mapped.message);
     const retryAfter = upstream.headers.get("retry-after");
     return apiError(mapped.code, mapped.message, mapped.status, retryAfter ? { "Retry-After": retryAfter } : undefined);
   }
 
-  // 5. Relay as our normalized SSE stream.
+  // 5. Relay as our normalized SSE stream. The stream resolves `completed`
+  // when it ends (in every case: done, error, timeout or client abort).
+  let resolveCompleted: (record: CompletionRecord) => void = () => {};
+  const completed = new Promise<CompletionRecord>((resolve) => {
+    resolveCompleted = resolve;
+  });
+  after(async () => {
+    const r = await completed;
+    await record({ response: r.text, usage: r.usage, latencyMs: r.latencyMs, status: r.status, errorMessage: r.errorMessage });
+  });
+
   const stream = createChatStream(upstream.body, {
     startedAt,
     isTimedOut: () => timeout.aborted,
+    onComplete: resolveCompleted,
   });
   return new Response(stream, { headers: SSE_HEADERS });
 }

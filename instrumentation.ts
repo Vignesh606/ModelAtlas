@@ -11,4 +11,7 @@ export async function register() {
   if (!env.OPENROUTER_API_KEY) {
     console.warn("[env] OPENROUTER_API_KEY is not set: the playground will require users to bring their own key.");
   }
+  if (!env.DATABASE_URL) {
+    console.warn("[env] DATABASE_URL is not set: request history is disabled.");
+  }
 }
