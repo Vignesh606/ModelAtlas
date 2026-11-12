@@ -23,6 +23,9 @@ export type SortKey = (typeof SORT_KEYS)[number];
 export type SortDir = "asc" | "desc";
 export type ViewMode = "table" | "cards";
 
+export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
+
 export interface CatalogState {
   q: string;
   lab: string | null;
@@ -31,9 +34,10 @@ export interface CatalogState {
   dir: SortDir;
   view: ViewMode;
   page: number;
+  pageSize: PageSize;
 }
 
-export const PAGE_SIZE = 25;
+export const PAGE_SIZE: PageSize = 10;
 
 export const DEFAULT_CATALOG_STATE: CatalogState = {
   q: "",
@@ -43,6 +47,7 @@ export const DEFAULT_CATALOG_STATE: CatalogState = {
   dir: "desc",
   view: "table",
   page: 1,
+  pageSize: PAGE_SIZE,
 };
 
 /** What Next passes as `searchParams`, or a URLSearchParams on the client. */
@@ -67,6 +72,8 @@ export function parseCatalogParams(params: RawSearchParams): CatalogState {
   const dir = first(params, "dir");
   const view = first(params, "view");
   const page = Number.parseInt(first(params, "page") ?? "", 10);
+  const size = Number.parseInt(first(params, "size") ?? "", 10);
+  const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(size) ? (size as PageSize) : PAGE_SIZE;
 
   return {
     q: (first(params, "q") ?? "").slice(0, 100),
@@ -76,6 +83,7 @@ export function parseCatalogParams(params: RawSearchParams): CatalogState {
     dir: dir === "asc" || dir === "desc" ? dir : DEFAULT_CATALOG_STATE.dir,
     view: view === "cards" ? "cards" : "table",
     page: Number.isInteger(page) && page > 0 ? page : 1,
+    pageSize,
   };
 }
 
@@ -91,6 +99,7 @@ export function serializeCatalogParams(state: CatalogState): string {
   }
   if (state.view !== "table") params.set("view", state.view);
   if (state.page > 1) params.set("page", String(state.page));
+  if (state.pageSize !== DEFAULT_CATALOG_STATE.pageSize) params.set("size", String(state.pageSize));
   return params.toString();
 }
 
@@ -162,10 +171,10 @@ export function filterModels(models: ModelSummary[], state: Pick<CatalogState, "
 
 export function applyCatalog(models: ModelSummary[], state: CatalogState) {
   const filtered = sortModels(filterModels(models, state), state.sort, state.dir);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(filtered.length / state.pageSize));
   const page = Math.min(state.page, pageCount); // an out-of-range page shows the last page
   return {
-    rows: filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    rows: filtered.slice((page - 1) * state.pageSize, page * state.pageSize),
     total: filtered.length,
     page,
     pageCount,

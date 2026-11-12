@@ -92,6 +92,13 @@
     outline-offset: 2px;
   }
 
+  /* Ensure native select dropdowns and options match the active theme. */
+  select option,
+  select optgroup {
+    background-color: var(--surface);
+    color: var(--fg);
+  }
+
   ::selection {
     background-color: var(--accent-soft);
     color: var(--fg);

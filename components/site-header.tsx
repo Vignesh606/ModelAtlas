@@ -13,7 +13,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex shrink-0 items-center gap-2 rounded-md text-[15px] font-semibold tracking-tight">
           <Globe className="size-5" aria-hidden />
           ModelAtlas

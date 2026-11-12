@@ -14,12 +14,12 @@ const models: ModelSummary[] = getSampleModels();
 
 describe("parseCatalogParams", () => {
   it("parses valid params", () => {
-    const state = parseCatalogParams({ q: "claude", lab: "anthropic", caps: "vision,free", sort: "input", dir: "asc", view: "cards", page: "2" });
-    expect(state).toEqual({ q: "claude", lab: "anthropic", caps: ["vision", "free"], sort: "input", dir: "asc", view: "cards", page: 2 });
+    const state = parseCatalogParams({ q: "claude", lab: "anthropic", caps: "vision,free", sort: "input", dir: "asc", view: "cards", page: "2", size: "25" });
+    expect(state).toEqual({ q: "claude", lab: "anthropic", caps: ["vision", "free"], sort: "input", dir: "asc", view: "cards", page: 2, pageSize: 25 });
   });
 
   it("ignores malformed values instead of throwing", () => {
-    const state = parseCatalogParams({ caps: "vision,bogus,vision", sort: "drop table", dir: "up", view: "grid", page: "-3" });
+    const state = parseCatalogParams({ caps: "vision,bogus,vision", sort: "drop table", dir: "up", view: "grid", page: "-3", size: "999" });
     expect(state).toEqual({ ...DEFAULT_CATALOG_STATE, caps: ["vision"] });
   });
 
@@ -51,5 +51,16 @@ describe("filter and sort", () => {
 
   it("clamps an out-of-range page", () => {
     expect(applyCatalog(models, { ...DEFAULT_CATALOG_STATE, page: 99 }).page).toBe(1);
+  });
+
+  it("defaults to 10 models per page and respects custom pageSize", () => {
+    const fifteen = Array.from({ length: 15 }, (_, i) => ({ ...models[0]!, id: `m/${i}`, name: `Model ${i}` }));
+    const firstPage = applyCatalog(fifteen, DEFAULT_CATALOG_STATE);
+    expect(firstPage.rows).toHaveLength(10);
+    expect(firstPage.pageCount).toBe(2);
+
+    const expanded = applyCatalog(fifteen, { ...DEFAULT_CATALOG_STATE, pageSize: 25 });
+    expect(expanded.rows).toHaveLength(15);
+    expect(expanded.pageCount).toBe(1);
   });
 });

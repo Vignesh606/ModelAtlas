@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Catalog } from "@/components/catalog/catalog";
 import { CatalogSkeleton } from "@/components/catalog/catalog-skeleton";
 import { HeroStats } from "@/components/hero-stats";
+import { RankingsSection } from "@/components/rankings/rankings-section";
 import { SectionHeading } from "@/components/section-heading";
 import { Faq } from "@/components/site/faq";
 import { ScrollProgress } from "@/components/site/scroll-progress";
@@ -25,6 +26,15 @@ export default function HomePage({ searchParams }: PageProps<"/">) {
     <div className="space-y-14">
       <ScrollProgress />
       <Hero />
+      <section id="rankings" aria-labelledby="rankings-title" className="scroll-mt-20">
+        <SectionHeading
+          id="rankings-title"
+          eyebrow="Leaderboard"
+          title="Model rankings & benchmarks"
+          description="Top 10 models by benchmark score. Expand to view all ranked models, or scroll down for the category breakdown."
+        />
+        <RankingsLoader />
+      </section>
       <section aria-labelledby="catalog-title">
         <SectionHeading id="catalog-title" eyebrow="Filter & select" title="Model catalog" />
         <Suspense fallback={<CatalogSkeleton />}>
@@ -79,6 +89,12 @@ async function Hero() {
       <HeroStats stats={stats} />
     </section>
   );
+}
+
+async function RankingsLoader() {
+  const catalog = await getCatalog();
+  const models = catalog.models.map(toSummary);
+  return <RankingsSection models={models} />;
 }
 
 async function CatalogLoader({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {

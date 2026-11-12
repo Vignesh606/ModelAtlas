@@ -44,11 +44,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <SiteHeader />
-        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 outline-none sm:px-6">
+        <main id="main" tabIndex={-1} className="w-full flex-1 px-4 py-10 outline-none sm:px-6 lg:px-8">
           {children}
         </main>
         <footer className="border-t border-border">
-          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 pb-24 text-xs text-muted sm:flex-row sm:justify-between sm:px-6">
+          <div className="flex w-full flex-col gap-3 px-4 py-6 pb-24 text-xs text-muted sm:flex-row sm:justify-between sm:px-6 lg:px-8">
             <p>
               Model, pricing and benchmark data from OpenRouter (benchmarks by Artificial Analysis). Values marked †
               are sample data from the assessment brief.

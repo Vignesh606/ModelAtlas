@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import {
   DEFAULT_CATALOG_STATE,
+  PAGE_SIZE_OPTIONS,
   applyCatalog,
   serializeCatalogParams,
   type CapabilityFilter,
   type CatalogState,
+  type PageSize,
   type SortKey,
 } from "@/lib/catalog";
 import type { ModelSummary } from "@/lib/types";
@@ -72,7 +74,7 @@ export function Catalog({ models, labs, initialState }: Props) {
 
   const resetFilters = () => {
     setQuery("");
-    setState((s) => ({ ...DEFAULT_CATALOG_STATE, view: s.view }));
+    setState((s) => ({ ...DEFAULT_CATALOG_STATE, view: s.view, pageSize: s.pageSize }));
   };
 
   const hasFilters = query !== "" || state.lab !== null || state.caps.length > 0;
@@ -100,11 +102,11 @@ export function Catalog({ models, labs, initialState }: Props) {
           <select
             value={state.lab ?? ""}
             onChange={(e) => update({ lab: e.target.value || null })}
-            className="min-w-0 flex-1 bg-transparent font-medium focus-visible:outline-none"
+            className="min-w-0 flex-1 bg-bg font-medium text-fg focus-visible:outline-none"
           >
-            <option value="">All labs ({labs.length})</option>
+            <option value="" className="bg-surface text-fg">All labs ({labs.length})</option>
             {labs.map((lab) => (
-              <option key={lab.slug} value={lab.slug}>
+              <option key={lab.slug} value={lab.slug} className="bg-surface text-fg">
                 {lab.name} ({lab.count})
               </option>
             ))}
@@ -119,6 +121,21 @@ export function Catalog({ models, labs, initialState }: Props) {
           <p aria-live="polite" className="font-mono text-xs text-muted tabular-nums">
             {result.total} {result.total === 1 ? "model" : "models"}
           </p>
+          <label className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-bg px-2 text-xs text-muted hover:border-border-strong focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+            <span>Show</span>
+            <select
+              aria-label="Models per page"
+              value={state.pageSize}
+              onChange={(e) => update({ pageSize: Number(e.target.value) as PageSize })}
+              className="bg-bg font-mono font-medium text-fg focus-visible:outline-none"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size} className="bg-surface text-fg">
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
           <div role="group" aria-label="View" className="flex rounded-lg border border-border bg-bg p-0.5">
             {(
               [
