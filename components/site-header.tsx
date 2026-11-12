@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Globe } from "lucide-react";
-import { NavLinks } from "@/components/nav-links";
+import { NavLinks, NavList } from "@/components/nav-links";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 /**
@@ -17,12 +18,16 @@ export function SiteHeader() {
           ModelAtlas
         </Link>
         <nav aria-label="Main" className="hidden md:block">
-          <NavLinks />
+          <Suspense fallback={<NavList pathname={null} />}>
+            <NavLinks />
+          </Suspense>
         </nav>
         <ThemeToggle />
       </div>
       <nav aria-label="Main mobile" className="overflow-x-auto border-t border-border px-2 py-1.5 md:hidden">
-        <NavLinks />
+        <Suspense fallback={<NavList pathname={null} />}>
+          <NavLinks />
+        </Suspense>
       </nav>
     </header>
   );

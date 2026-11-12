@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { CompareTray } from "@/components/compare-tray";
 import { SiteHeader } from "@/components/site-header";
@@ -46,7 +47,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             are sample data from the assessment brief.
           </div>
         </footer>
-        <CompareTray />
+        {/* The tray reads usePathname, which suspends on request-time routes (see NavLinks). */}
+        <Suspense fallback={null}>
+          <CompareTray />
+        </Suspense>
       </body>
     </html>
   );
