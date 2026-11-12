@@ -37,6 +37,16 @@ export function mapUpstreamError(
     case 408:
       return { code: "timeout", status: 504, message: "The model took too long to respond. Try again." };
     case 429:
+      // A daily cap applies to every free model until it resets, so "try another model" wouldn't help.
+      if (upstreamMessage && /per[-\s]?day/i.test(upstreamMessage)) {
+        return {
+          code: "rate_limited",
+          status: 429,
+          message: usingUserKey
+            ? "Your OpenRouter account has used today's free-model allowance. Add credits or try again tomorrow."
+            : "The shared key has used today's free-model allowance. Add your own OpenRouter key in Settings, or try again tomorrow.",
+        };
+      }
       return {
         code: "rate_limited",
         status: 429,

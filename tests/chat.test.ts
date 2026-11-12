@@ -70,6 +70,13 @@ describe("mapUpstreamError", () => {
     expect(mapUpstreamError(upstream, null, false)).toMatchObject({ code, status });
   });
 
+  it("explains a daily free-model cap differently from a short rate limit", () => {
+    const daily = mapUpstreamError(429, "Rate limit exceeded: free-models-per-day. Add 10 credits...", false);
+    expect(daily).toMatchObject({ code: "rate_limited", status: 429 });
+    expect(daily.message).toContain("today's free-model allowance");
+    expect(mapUpstreamError(429, "Rate limit exceeded", false).message).toContain("Wait a moment");
+  });
+
   it("tailors the 401 message to whose key failed", () => {
     expect(mapUpstreamError(401, null, true).message).toContain("Your OpenRouter API key");
     expect(mapUpstreamError(401, null, false).message).toContain("server's");
