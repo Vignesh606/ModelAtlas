@@ -27,13 +27,15 @@ export interface Provider {
   streamUsage?: boolean;
   /** Name of the max-tokens field (OpenAI's newer models only accept max_completion_tokens). */
   maxTokensField?: string;
+  /** Preferred default model when the server has a key for this provider. */
+  defaultModel?: string;
 }
 
 export const PROVIDERS: Record<ProviderId, Provider> = {
   openrouter: { name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", keyHint: "sk-or-..." },
   openai: { name: "OpenAI", baseUrl: "https://api.openai.com/v1", keyHint: "sk-...", streamUsage: true, maxTokensField: "max_completion_tokens" },
   anthropic: { name: "Anthropic", baseUrl: "https://api.anthropic.com/v1", keyHint: "sk-ant-...", streamUsage: true },
-  gemini: { name: "Google", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", keyHint: "AIza...", streamUsage: true },
+  gemini: { name: "Google", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", keyHint: "AIza...", streamUsage: true, defaultModel: "gemini-2.5-flash" },
   groq: { name: "Groq", baseUrl: "https://api.groq.com/openai/v1", keyHint: "gsk_...", streamUsage: true },
   deepseek: { name: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", keyHint: "sk-...", streamUsage: true },
   mistral: { name: "Mistral", baseUrl: "https://api.mistral.ai/v1", keyHint: "API key" },

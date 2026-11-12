@@ -29,7 +29,7 @@ const providerModelSchema = z.object({
 });
 
 /** Ids that are clearly not chat models (embeddings, speech, images...). */
-const NOT_CHAT = /embed|whisper|tts|dall-e|moderation|image|audio|transcribe|rerank|realtime|guard/i;
+const NOT_CHAT = /embed|whisper|tts|dall-e|moderation|image|audio|transcribe|rerank|realtime|guard|live|lyria|aqa|banana|robotics|research|computer-use|antigravity/i;
 
 /**
  * Turns a provider's /models list into playground models. Other providers

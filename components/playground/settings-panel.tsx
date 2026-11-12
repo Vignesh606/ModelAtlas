@@ -24,6 +24,7 @@ export function SettingsPanel({
   onKeyChange,
   onModelsLoaded,
   serverHasKey,
+  serverProviders,
 }: {
   models: ChatModel[];
   settings: ChatSettings;
@@ -32,6 +33,7 @@ export function SettingsPanel({
   onKeyChange: (provider: ProviderId, key: string) => void;
   onModelsLoaded: (provider: ProviderId, models: ChatModel[]) => void;
   serverHasKey: boolean;
+  serverProviders: ProviderId[];
 }) {
   const id = useId();
   const supportsTemperature = models.some((m) => m.supportedParameters.includes("temperature"));
@@ -148,7 +150,7 @@ export function SettingsPanel({
         </div>
       </Card>
 
-      <ProviderKeys keys={keys} onKeyChange={onKeyChange} onModelsLoaded={onModelsLoaded} serverHasKey={serverHasKey} />
+      <ProviderKeys keys={keys} onKeyChange={onKeyChange} onModelsLoaded={onModelsLoaded} serverHasKey={serverHasKey} serverProviders={serverProviders} />
     </div>
   );
 }
@@ -162,11 +164,13 @@ function ProviderKeys({
   onKeyChange,
   onModelsLoaded,
   serverHasKey,
+  serverProviders,
 }: {
   keys: Partial<Record<ProviderId, string>>;
   onKeyChange: (provider: ProviderId, key: string) => void;
   onModelsLoaded: (provider: ProviderId, models: ChatModel[]) => void;
   serverHasKey: boolean;
+  serverProviders: ProviderId[];
 }) {
   const id = useId();
   const [provider, setProvider] = useState<ProviderId>("openrouter");
@@ -174,11 +178,12 @@ function ProviderKeys({
   const [status, setStatus] = useState<{ loading: boolean; message: string }>({ loading: false, message: "" });
   const { name, keyHint } = PROVIDERS[provider];
   const key = keys[provider] ?? "";
+  const serverHasProviderKey = serverProviders.includes(provider);
 
   const loadModels = async () => {
     setStatus({ loading: true, message: "Loading models..." });
     try {
-      const res = await fetch(`/api/provider-models?provider=${provider}`, { headers: { [USER_KEY_HEADER]: key } });
+      const res = await fetch(`/api/provider-models?provider=${provider}`, { headers: key ? { [USER_KEY_HEADER]: key } : {} });
       const body: unknown = await res.json();
       if (!res.ok) {
         const parsed = apiErrorBodySchema.safeParse(body);
@@ -239,7 +244,7 @@ function ProviderKeys({
         </button>
       </div>
       {provider !== "openrouter" ? (
-        <Button variant="secondary" size="sm" className="mt-2" onClick={loadModels} disabled={!key || status.loading}>
+        <Button variant="secondary" size="sm" className="mt-2" onClick={loadModels} disabled={(!key && !serverHasProviderKey) || status.loading}>
           Load models
         </Button>
       ) : null}
@@ -250,7 +255,9 @@ function ProviderKeys({
       ) : null}
       <p className="mt-2 text-xs text-muted">
         {provider !== "openrouter"
-          ? `Paste your ${name} key, then load its models. `
+          ? serverHasProviderKey
+            ? `${name} models are ready via the shared key; paste your own key to use yours instead. `
+            : `Paste your ${name} key, then load its models. `
           : serverHasKey
             ? "Leave empty to use the shared key (free models). "
             : "Required: this deployment has no shared key. "}

@@ -17,6 +17,8 @@ interface Props {
   /** Default model for the second pane in side-by-side mode. */
   secondModelId: string;
   serverHasKey: boolean;
+  /** Other providers the server has its own key for (their models are already in `models`). */
+  serverProviders: ProviderId[];
 }
 
 /*
@@ -25,7 +27,7 @@ interface Props {
  * are plain React state, so keys exist only in this tab's memory: no localStorage, no
  * cookie, gone on reload.
  */
-export function Playground({ models: catalogModels, initialModelId, secondModelId, serverHasKey }: Props) {
+export function Playground({ models: catalogModels, initialModelId, secondModelId, serverHasKey, serverProviders }: Props) {
   // Catalog (OpenRouter) models plus any loaded from providers the user connected.
   const [providerModels, setProviderModels] = useState<ChatModel[]>([]);
   const models = [...catalogModels, ...providerModels];
@@ -53,7 +55,7 @@ export function Playground({ models: catalogModels, initialModelId, secondModelI
 
   // Keep ?model= in sync in single mode, so the page can be bookmarked or shared.
   useEffect(() => {
-    if (!modelA || sideBySide || modelA.provider !== "openrouter") return;
+    if (!modelA || sideBySide) return;
     const url = `${window.location.pathname}?model=${encodeURIComponent(modelA.id)}`;
     if (`${window.location.pathname}${window.location.search}` !== url) window.history.replaceState(null, "", url);
   }, [modelA, sideBySide]);
@@ -127,6 +129,7 @@ export function Playground({ models: catalogModels, initialModelId, secondModelI
             onKeyChange={(provider, key) => setKeys((k) => ({ ...k, [provider]: key }))}
             onModelsLoaded={onModelsLoaded}
             serverHasKey={serverHasKey}
+            serverProviders={serverProviders}
           />
         </aside>
       </div>

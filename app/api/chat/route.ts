@@ -4,7 +4,7 @@ import { USER_KEY_HEADER, chatRequestSchema, firstIssue, type ChatRequest } from
 import { mapUpstreamError, readUpstreamErrorMessage } from "@/lib/chat-errors";
 import { createChatStream, type CompletionRecord } from "@/lib/chat-stream";
 import { getModel } from "@/lib/data";
-import { getServerEnv } from "@/lib/env";
+import { serverKeyFor } from "@/lib/env";
 import { saveRequest, type SaveRequestInput } from "@/lib/history";
 import { PROVIDERS, authHeaders, isValidKey, type ProviderId } from "@/lib/providers";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -20,7 +20,7 @@ import { getOrCreateSessionId } from "@/lib/session";
  * 502 provider failure, 504 timeout. Errors after streaming starts can't change
  * the status (200 is already sent), so they arrive as an `error` event.
  *
- * Keys: the server key (OpenRouter only) comes from env; a user's own key comes per request in
+ * Keys: server keys come from env (lib/env.ts serverKeyFor); a user's own key comes per request in
  * a header and is used only for that upstream call: never stored or logged.
  */
 
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
   if (userKey && !isValidKey(provider, userKey)) {
     return apiError("invalid_request", `That doesn't look like a ${providerName} API key.`, 400);
   }
-  const apiKey = userKey ?? (provider === "openrouter" ? getServerEnv().env.OPENROUTER_API_KEY : undefined);
+  const apiKey = userKey ?? serverKeyFor(provider);
   if (!apiKey) {
     const message =
       provider === "openrouter"

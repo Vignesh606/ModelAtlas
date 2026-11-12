@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { isValidKey, type ProviderId } from "@/lib/providers";
 
 /*
  * Server environment, validated with zod. Secrets live only in env vars
@@ -54,4 +55,19 @@ export function getServerEnv(): { env: ServerEnv; problems: string[] } {
     cached = { env: envSchema.parse(partial), problems };
   }
   return cached;
+}
+
+/**
+ * Server-side key for a provider, if the deployment has one: OPENROUTER_API_KEY,
+ * or <PROVIDER>_API_KEY for the others (e.g. GEMINI_API_KEY; GOOGLE_API_KEY and
+ * google_ai_studio_api also work for Gemini). Malformed keys count as missing.
+ */
+export function serverKeyFor(provider: ProviderId): string | undefined {
+  if (provider === "openrouter") return getServerEnv().env.OPENROUTER_API_KEY;
+  const names = provider === "gemini" ? ["GEMINI_API_KEY", "GOOGLE_API_KEY", "google_ai_studio_api", "GOOGLE_AI_STUDIO_API"] : [`${provider.toUpperCase()}_API_KEY`];
+  for (const name of names) {
+    const key = process.env[name]?.trim();
+    if (key && isValidKey(provider, key)) return key;
+  }
+  return undefined;
 }
