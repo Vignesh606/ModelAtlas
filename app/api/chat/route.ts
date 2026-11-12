@@ -88,7 +88,11 @@ export async function POST(request: NextRequest) {
   }
   const apiKey = userKey ?? (provider === "openrouter" ? getServerEnv().env.OPENROUTER_API_KEY : undefined);
   if (!apiKey) {
-    return apiError("unauthorized", `Add your ${providerName} API key in Settings to use this model.`, 401);
+    const message =
+      provider === "openrouter"
+        ? "This model runs through OpenRouter, so it needs an OpenRouter key. To use another provider's key, choose that provider in Settings, click Load models, and pick one of its models."
+        : `Add your ${providerName} API key in Settings to use this model.`;
+    return apiError("unauthorized", message, 401);
   }
 
   // 4. Call the provider. Abort on our timeout or when the client disconnects (Stop button).

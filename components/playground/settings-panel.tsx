@@ -187,7 +187,8 @@ function ProviderKeys({
       // Our own API, typed by the route; checked loosely to stay simple.
       const models = (body as { models: ChatModel[] }).models;
       onModelsLoaded(provider, models);
-      setStatus({ loading: false, message: `Loaded ${models.length} ${name} models. Pick one in the model switcher.` });
+      if (!models.length) return setStatus({ loading: false, message: `No chat models found for this ${name} key.` });
+      setStatus({ loading: false, message: `Loaded ${models.length} ${name} models. Switched to ${models[0]?.name ?? "one"}; use the model switcher to pick another.` });
     } catch {
       setStatus({ loading: false, message: "Network error. Try again." });
     }

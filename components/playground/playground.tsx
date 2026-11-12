@@ -42,9 +42,14 @@ export function Playground({ models: catalogModels, initialModelId, secondModelI
   const chatA = useChat({ model: modelA ?? fallback!, settings, apiKey: keyFor(modelA) });
   const chatB = useChat({ model: modelB ?? fallback!, settings, apiKey: keyFor(modelB) });
 
-  /** Replaces this provider's models with a freshly loaded list. */
-  const onModelsLoaded = (provider: ProviderId, loaded: ChatModel[]) =>
+  /**
+   * Replaces this provider's models with a freshly loaded list and switches the
+   * first pane to one of them, so the next message uses the new key right away.
+   */
+  const onModelsLoaded = (provider: ProviderId, loaded: ChatModel[]) => {
     setProviderModels((all) => [...all.filter((m) => m.provider !== provider), ...loaded]);
+    if (loaded[0] && modelA?.provider !== provider) setModelA(loaded[0]);
+  };
 
   // Keep ?model= in sync in single mode, so the page can be bookmarked or shared.
   useEffect(() => {
