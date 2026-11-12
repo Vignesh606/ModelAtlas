@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { CompareTray } from "@/components/compare-tray";
+import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { Analytics } from "@/components/site/analytics";
+import { CommandPalette } from "@/components/site/command-palette";
+import { CookieSettingsButton } from "@/components/site/cookie-settings-button";
+import { FloatingLayer } from "@/components/site/floating-layer";
+import { SITE } from "@/lib/site";
 import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
@@ -42,15 +48,29 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <footer className="border-t border-border">
-          <div className="mx-auto max-w-6xl px-4 py-6 text-xs text-muted sm:px-6">
-            Model, pricing and benchmark data from OpenRouter (benchmarks by Artificial Analysis). Values marked †
-            are sample data from the assessment brief.
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 pb-24 text-xs text-muted sm:flex-row sm:justify-between sm:px-6">
+            <p>
+              Model, pricing and benchmark data from OpenRouter (benchmarks by Artificial Analysis). Values marked †
+              are sample data from the assessment brief.
+            </p>
+            <nav aria-label="Footer" className="flex shrink-0 gap-4">
+              <Link href="/privacy" className="rounded hover:text-fg">
+                Privacy
+              </Link>
+              <CookieSettingsButton className="rounded hover:text-fg" />
+              <a href={SITE.githubUrl} target="_blank" rel="noopener noreferrer" className="rounded hover:text-fg">
+                GitHub
+              </a>
+            </nav>
           </div>
         </footer>
-        {/* The tray reads usePathname, which suspends on request-time routes (see NavLinks). */}
+        {/* These read usePathname, which suspends on request-time routes (see NavLinks). */}
         <Suspense fallback={null}>
           <CompareTray />
+          <Analytics />
         </Suspense>
+        <FloatingLayer />
+        <CommandPalette />
       </body>
     </html>
   );

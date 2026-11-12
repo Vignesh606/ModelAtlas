@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { buttonClasses } from "@/components/ui/button";
@@ -15,8 +16,25 @@ import { clearCompareItems, removeCompareItem, useCompareItems } from "@/lib/com
 export function CompareTray() {
   const items = useCompareItems();
   const pathname = usePathname();
-
   if (items.length === 0 || pathname.startsWith("/compare")) return null;
+  return <TrayBar items={items} />;
+}
+
+function TrayBar({ items }: { items: ReturnType<typeof useCompareItems> }) {
+  const barRef = useRef<HTMLElement>(null);
+
+  // Publish the bar height so the floating buttons/cookie banner sit above it.
+  useEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() => root.style.setProperty("--tray-offset", `${bar.offsetHeight}px`));
+    observer.observe(bar);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--tray-offset");
+    };
+  }, []);
 
   const missing = MIN_COMPARE - items.length;
 
@@ -25,6 +43,7 @@ export function CompareTray() {
       {/* Spacer so the fixed bar never hides the end of the page. */}
       <div aria-hidden className="h-24" />
       <section
+        ref={barRef}
         aria-label="Comparison tray"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface shadow-card"
       >

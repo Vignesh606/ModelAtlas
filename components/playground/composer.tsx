@@ -47,7 +47,7 @@ export function Composer({
         e.preventDefault();
         submit();
       }}
-      className="rounded-xl border border-border bg-bg p-2 focus-within:border-border-strong"
+      className="rounded-xl border border-border bg-bg p-2 focus-within:border-border-strong focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent"
     >
       <label htmlFor="composer" className="sr-only">
         Message

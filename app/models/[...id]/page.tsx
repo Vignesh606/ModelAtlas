@@ -6,6 +6,7 @@ import { ArrowLeft, Check, Minus } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { ModelBadges, ScoreValue } from "@/components/catalog/model-badges";
 import { CompareToggle } from "@/components/compare-toggle";
+import { ScrollProgress } from "@/components/site/scroll-progress";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { getModel, getProviders } from "@/lib/data";
@@ -48,6 +49,7 @@ export default async function ModelPage({ params }: PageProps<"/models/[...id]">
 
   return (
     <article className="space-y-8">
+      <ScrollProgress />
       <Link href="/" className="inline-flex items-center gap-1.5 rounded text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="size-4" aria-hidden />
         All models

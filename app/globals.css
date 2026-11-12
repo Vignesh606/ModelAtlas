@@ -226,6 +226,17 @@
   font-style: italic;
 }
 
+/* Mobile menu: slides down from the header (disabled under reduced motion below). */
+@keyframes menu-slide-down {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+}
+.mobile-menu[open] {
+  animation: menu-slide-down 180ms ease-out;
+}
+
 /* Respect users who ask for less motion: neutralise all transitions/animations. */
 @media (prefers-reduced-motion: reduce) {
   *,

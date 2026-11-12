@@ -86,7 +86,7 @@ export function ChatPane({
         role="log"
         aria-live="polite"
         aria-label="Conversation"
-        className={`flex-1 space-y-6 overflow-y-auto p-4 sm:p-5 ${compact ? "h-[50vh] min-h-80" : "h-[58vh] min-h-96"}`}
+        className={`flex-1 space-y-6 overflow-y-auto p-4 sm:p-5 ${compact ? "h-[45vh] min-h-72" : "h-[50vh] min-h-80"}`}
       >
         {chat.messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">

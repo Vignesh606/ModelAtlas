@@ -95,7 +95,7 @@ export function Catalog({ models, labs, initialState }: Props) {
             className="h-10 w-full rounded-lg border border-border bg-bg pr-3 pl-9 text-sm placeholder:text-muted hover:border-border-strong"
           />
         </label>
-        <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-bg px-3 text-sm hover:border-border-strong sm:w-64">
+        <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-bg px-3 text-sm hover:border-border-strong sm:w-64 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
           <span className="text-muted">Lab</span>
           <select
             value={state.lab ?? ""}

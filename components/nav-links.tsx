@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 
@@ -32,11 +32,26 @@ export function NavList({ pathname, className }: { pathname: string | null; clas
               )}
             >
               {label}
+              <PendingDot />
             </Link>
           </li>
         );
       })}
     </ul>
+  );
+}
+
+/** Route-transition feedback: a small dot while the clicked link is still loading. */
+function PendingDot() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "ml-1.5 inline-block size-1.5 rounded-full bg-current align-middle transition-opacity duration-150",
+        pending ? "animate-pulse opacity-70" : "opacity-0",
+      )}
+    />
   );
 }
 

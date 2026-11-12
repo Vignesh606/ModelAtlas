@@ -5,6 +5,8 @@ import { Catalog } from "@/components/catalog/catalog";
 import { CatalogSkeleton } from "@/components/catalog/catalog-skeleton";
 import { HeroStats } from "@/components/hero-stats";
 import { SectionHeading } from "@/components/section-heading";
+import { Faq } from "@/components/site/faq";
+import { ScrollProgress } from "@/components/site/scroll-progress";
 import { buttonClasses } from "@/components/ui/button";
 import { listLabs, parseCatalogParams, serializeCatalogParams } from "@/lib/catalog";
 import { getCatalog } from "@/lib/data";
@@ -21,12 +23,22 @@ import { toSummary } from "@/lib/summary";
 export default function HomePage({ searchParams }: PageProps<"/">) {
   return (
     <div className="space-y-14">
+      <ScrollProgress />
       <Hero />
       <section aria-labelledby="catalog-title">
         <SectionHeading id="catalog-title" eyebrow="Filter & select" title="Model catalog" />
         <Suspense fallback={<CatalogSkeleton />}>
           <CatalogLoader searchParams={searchParams} />
         </Suspense>
+      </section>
+      <section id="faq" aria-labelledby="faq-title" className="scroll-mt-20">
+        <SectionHeading
+          id="faq-title"
+          eyebrow="FAQ"
+          title="Questions, answered"
+          description="Where the data comes from, how accurate it is, and what we store."
+        />
+        <Faq />
       </section>
     </div>
   );
@@ -40,10 +52,10 @@ async function Hero() {
     <section aria-labelledby="hero-title" className="grid items-center gap-10 lg:grid-cols-[1fr_minmax(0,540px)]">
       <div className="space-y-5">
         <p className="text-sm text-muted">Last refreshed {formatDate(catalog.fetchedAt)}</p>
-        <h1 id="hero-title" className="font-display text-5xl leading-[1.05] tracking-tight sm:text-6xl">
+        <h1 id="hero-title" className="font-display text-5xl leading-[1.05] tracking-tight text-balance sm:text-6xl">
           The whole AI model landscape, on one page.
         </h1>
-        <p className="max-w-xl text-muted">
+        <p className="max-w-xl text-pretty text-muted">
           Compare context windows, token prices, capabilities and where each model is hosted. Sort, filter and
           estimate your monthly API bill side by side.
         </p>

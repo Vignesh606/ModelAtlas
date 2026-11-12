@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { ModelBadges, ScoreValue } from "@/components/catalog/model-badges";
 import { CompareToggle } from "@/components/compare-toggle";
+import { isFree } from "@/lib/catalog";
 import { formatContext, formatPrice } from "@/lib/format";
 import { modelHref } from "@/lib/routes";
 import type { ModelSummary } from "@/lib/types";
@@ -11,6 +12,9 @@ import type { ModelSummary } from "@/lib/types";
  * the card, so the whole card is clickable while the compare button (z-10)
  * stays a separate control. Nesting a button inside a link would be invalid HTML.
  */
+/** Mirrors ModelBadges: only render the badge row when it has something in it. */
+const hasBadges = (m: ModelSummary) => isFree(m) || m.expiresAt !== null || m.source === "sample";
+
 export function ModelsCards({ rows }: { rows: ModelSummary[] }) {
   return (
     <ul className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -34,9 +38,11 @@ export function ModelsCards({ rows }: { rows: ModelSummary[] }) {
             </div>
             <CompareToggle item={{ id: m.id, name: m.name, labName: m.labName }} />
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            <ModelBadges model={m} />
-          </div>
+          {hasBadges(m) ? (
+            <div className="flex flex-wrap gap-1.5">
+              <ModelBadges model={m} />
+            </div>
+          ) : null}
           <dl className="mt-auto grid grid-cols-4 gap-2 text-xs">
             {[
               { label: "Context", value: formatContext(m.context) },
