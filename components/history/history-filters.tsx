@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Search } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { serializeHistoryQuery, type HistoryQuery } from "@/lib/history-query";
 
 /*
@@ -51,7 +52,7 @@ export function HistoryFilters({
           className="h-10 w-full rounded-lg border border-border bg-bg pr-3 pl-9 text-sm placeholder:text-muted hover:border-border-strong"
         />
       </label>
-      <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-bg px-3 text-sm hover:border-border-strong sm:w-72">
+      <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-bg px-3 text-sm hover:border-border-strong sm:w-72 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
         <span className="text-muted">Model</span>
         <select
           value={query.model ?? ""}
@@ -66,8 +67,8 @@ export function HistoryFilters({
           ))}
         </select>
       </label>
-      <span aria-live="polite" className="text-xs text-muted sm:w-20">
-        {isPending ? "Updating..." : ""}
+      <span aria-live="polite" className="flex h-10 w-6 items-center justify-center text-muted">
+        {isPending ? <Spinner label="Updating results" /> : null}
       </span>
     </div>
   );

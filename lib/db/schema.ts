@@ -36,6 +36,31 @@ export const requests = pgTable(
   ],
 );
 
+/*
+ * Page views, recorded ONLY after the visitor accepts analytics. UTM fields
+ * hold the visitor's first-touch campaign (from the 30-day ma_utm cookie);
+ * referrer is the external site they came from (origin + path, no query).
+ */
+export const visits = pgTable(
+  "visits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id").notNull(),
+    path: text("path").notNull(),
+    utmSource: text("utm_source"),
+    utmMedium: text("utm_medium"),
+    utmCampaign: text("utm_campaign"),
+    utmTerm: text("utm_term"),
+    utmContent: text("utm_content"),
+    referrer: text("referrer"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("visits_campaign_idx").on(table.utmCampaign),
+    index("visits_session_created_idx").on(table.sessionId, table.createdAt),
+  ],
+);
+
 export type RequestRow = typeof requests.$inferSelect;
 export type NewRequestRow = typeof requests.$inferInsert;
 export type RequestStatus = (typeof requestStatus.enumValues)[number];

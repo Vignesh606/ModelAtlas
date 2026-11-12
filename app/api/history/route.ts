@@ -3,11 +3,25 @@ import { apiError } from "@/lib/api-error";
 import { isHistoryEnabled, listHistory } from "@/lib/history";
 import { parseHistoryQuery } from "@/lib/history-query";
 import { readSessionId } from "@/lib/session";
+import { deleteSessionData } from "@/lib/visits";
 
 /**
  * GET /api/history?page=1&model=a/b&q=text -> paginated list for this browser's session.
  * No session cookie yet simply means an empty history (not an error).
  */
+/** DELETE /api/history -> deletes everything stored for this session (history and page views). */
+export async function DELETE() {
+  if (!isHistoryEnabled()) return apiError("internal_error", "History is not configured on this server.", 503);
+  const sessionId = await readSessionId();
+  if (!sessionId) return Response.json({ deleted: { requests: 0, visits: 0 } });
+  try {
+    return Response.json({ deleted: await deleteSessionData(sessionId) });
+  } catch (error) {
+    console.error("[history] delete failed:", error instanceof Error ? error.message : error);
+    return apiError("internal_error", "Couldn't delete your data. Try again.", 500);
+  }
+}
+
 export async function GET(request: NextRequest) {
   if (!isHistoryEnabled()) return apiError("internal_error", "History is not configured on this server.", 503);
 

@@ -12,6 +12,9 @@ import { getCatalog } from "@/lib/data";
 import { getHistoryStats, isHistoryEnabled, listHistory } from "@/lib/history";
 import { parseHistoryQuery, serializeHistoryQuery, type HistoryQuery } from "@/lib/history-query";
 import { readSessionId } from "@/lib/session";
+import { getCampaignCounts, type CampaignCount } from "@/lib/visits";
+import { DeleteDataButton } from "@/components/site/delete-data-button";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "History",
@@ -28,7 +31,68 @@ export default function HistoryPage({ searchParams }: PageProps<"/history">) {
       <Suspense fallback={<HistorySkeleton />}>
         <HistoryContent searchParams={searchParams} />
       </Suspense>
+      <Suspense fallback={null}>
+        <CampaignsAndData />
+      </Suspense>
     </>
+  );
+}
+
+/**
+ * Per-campaign counts from consented page views (aggregate totals only),
+ * plus the "delete my data" control.
+ */
+async function CampaignsAndData() {
+  await connection(); // request-time data: never prerendered
+  if (!isHistoryEnabled()) return null;
+
+  let campaigns: CampaignCount[] = [];
+  try {
+    campaigns = await getCampaignCounts();
+  } catch (error) {
+    console.error("[history] campaign counts failed:", error instanceof Error ? error.message : error);
+  }
+
+  return (
+    <div className="mt-8 grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <section aria-labelledby="campaigns-title" className="rounded-2xl border border-border bg-surface p-4 shadow-card">
+        <h2 id="campaigns-title" className="text-sm font-medium">
+          Visits by campaign
+        </h2>
+        <p className="mt-0.5 text-xs text-muted">First-touch UTM campaign, all visitors who accepted analytics.</p>
+        {campaigns.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">No consented visits yet.</p>
+        ) : (
+          <table className="mt-3 w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted">
+                <th scope="col" className="pb-1.5 font-medium">Campaign</th>
+                <th scope="col" className="pb-1.5 text-right font-medium">Visitors</th>
+                <th scope="col" className="pb-1.5 text-right font-medium">Page views</th>
+              </tr>
+            </thead>
+            <tbody>
+              {campaigns.map((c) => (
+                <tr key={c.campaign} className="border-t border-border">
+                  <td className="max-w-48 truncate py-1.5">{c.campaign}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums">{c.visitors}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums">{c.views}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+      <section aria-labelledby="your-data-title" className="rounded-2xl border border-border bg-surface p-4 shadow-card">
+        <h2 id="your-data-title" className="text-sm font-medium">
+          Your data
+        </h2>
+        <p className="mt-0.5 mb-3 text-xs text-muted">
+          Remove this browser&apos;s requests and page views. See <Link href="/privacy" className="underline underline-offset-2 hover:text-fg">Privacy</Link>.
+        </p>
+        <DeleteDataButton />
+      </section>
+    </div>
   );
 }
 
