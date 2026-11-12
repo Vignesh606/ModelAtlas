@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { PageIntro } from "@/components/page-intro";
 import { Playground } from "@/components/playground/playground";
@@ -16,7 +17,8 @@ export default function PlaygroundPage({ searchParams }: PageProps<"/playground"
     <>
       <PageIntro title="AI Playground">
         Chat with any model on OpenRouter, compare two side by side, and see tokens and projected cost for each reply.
-        API keys stay on the server.
+        API keys stay on the server. Prompts and replies are saved to your <Link href="/history" className="underline underline-offset-2 hover:text-fg">history</Link>,
+        tied to this browser only.
       </PageIntro>
       <Suspense fallback={<PlaygroundSkeleton />}>
         <PlaygroundLoader searchParams={searchParams} />

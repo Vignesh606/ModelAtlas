@@ -4,8 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-/** Icon button that copies text and briefly confirms. `getText` runs at click time. */
-export function CopyButton({ getText, label, className }: { getText: () => string; label: string; className?: string }) {
+/**
+ * Icon button that copies text and briefly confirms. Pass `text` from Server
+ * Components (functions can't cross the server/client boundary), or `getText`
+ * from client code when the text is only known at click time.
+ */
+export function CopyButton({
+  text,
+  getText,
+  label,
+  className,
+}: {
+  text?: string;
+  getText?: () => string;
+  label: string;
+  className?: string;
+}) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -14,7 +28,7 @@ export function CopyButton({ getText, label, className }: { getText: () => strin
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(getText());
+      await navigator.clipboard.writeText(getText ? getText() : (text ?? ""));
       setCopied(true);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => setCopied(false), 1500);
