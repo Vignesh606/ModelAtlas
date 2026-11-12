@@ -16,7 +16,7 @@ const MAX_RESULTS = 50;
  * onMouseDown + preventDefault so clicking doesn't blur the input first.
  * Used by /compare and the playground.
  */
-export function ModelPicker({
+export function ModelPicker<T extends ModelSummary>({
   models,
   excludeIds = [],
   onSelect,
@@ -25,9 +25,9 @@ export function ModelPicker({
   disabled = false,
   disabledHint,
 }: {
-  models: ModelSummary[];
+  models: T[];
   excludeIds?: readonly string[];
-  onSelect: (model: ModelSummary) => void;
+  onSelect: (model: T) => void;
   label: string;
   placeholder?: string;
   disabled?: boolean;
@@ -51,7 +51,7 @@ export function ModelPicker({
     return { results: matches.slice(0, MAX_RESULTS), more: matches.length > MAX_RESULTS };
   }, [models, excludeIds, query]);
 
-  const choose = (model: ModelSummary) => {
+  const choose = (model: T) => {
     onSelect(model);
     setQuery("");
     setActiveIndex(0);

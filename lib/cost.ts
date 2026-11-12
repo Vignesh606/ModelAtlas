@@ -62,6 +62,27 @@ export function rankByCost(
   };
 }
 
+/** Assumption behind the playground's projection, shown to the user next to the figure. */
+export const PROJECTION_REQUESTS_PER_DAY = 100;
+const DAYS_PER_MONTH = 30;
+
+/**
+ * Projected monthly cost if a request like this one ran
+ * PROJECTION_REQUESTS_PER_DAY times a day. Uses the cost OpenRouter reported
+ * for the request when available (it reflects the provider actually used),
+ * otherwise the list price formula. Null when neither is known.
+ */
+export function projectMonthlyCost(
+  usage: { promptTokens: number; completionTokens: number; cost: number | null },
+  pricing: Pick<Pricing, "input" | "output">,
+  requestsPerDay = PROJECTION_REQUESTS_PER_DAY,
+): { perRequest: number; monthly: number } | null {
+  const perRequest =
+    usage.cost ?? monthlyCost(pricing, { inputTokens: usage.promptTokens, outputTokens: usage.completionTokens });
+  if (perRequest === null) return null;
+  return { perRequest, monthly: perRequest * requestsPerDay * DAYS_PER_MONTH };
+}
+
 /**
  * Ids holding the lowest value in a matrix row. Empty unless at least two
  * values are known and they differ: a "lowest" badge on every cell means nothing.
