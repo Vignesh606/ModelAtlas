@@ -11,6 +11,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { getModel, getProviders } from "@/lib/data";
 import { formatContext, formatDate, formatInteger, formatPrice } from "@/lib/format";
 import { idFromSegments, playgroundHref } from "@/lib/routes";
+import { SAMPLE_MODEL_IDS } from "@/lib/sample-data";
 import type { ProviderListing } from "@/lib/types";
 
 /*
@@ -19,9 +20,7 @@ import type { ProviderListing } from "@/lib/types";
  * brief models. Any other id renders on first request and is then cached.
  */
 export function generateStaticParams() {
-  return ["openai/gpt-6.1-terra", "deepseek/deepseek-v4.1-flash-uncensored", "anthropic/claude-35-sonnet"].map(
-    (id) => ({ id: id.split("/") }),
-  );
+  return SAMPLE_MODEL_IDS.map((id) => ({ id: id.split("/") }));
 }
 
 async function loadModel(params: PageProps<"/models/[...id]">["params"]) {
@@ -59,7 +58,7 @@ export default async function ModelPage({ params }: PageProps<"/models/[...id]">
           <BrandLogo labName={model.labName} size="lg" />
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{model.name}</h1>
+              <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{model.name}</h1>
               <ModelBadges model={model} />
             </div>
             <p className="text-sm text-muted">
@@ -104,7 +103,7 @@ export default async function ModelPage({ params }: PageProps<"/models/[...id]">
         ))}
       </dl>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Pricing" note="USD per 1M tokens">
           <SpecRow label="Input" value={formatPrice(model.pricing.input)} mono />
           <SpecRow label="Output" value={formatPrice(model.pricing.output)} mono />
@@ -179,7 +178,7 @@ function ProvidersTable({ providers }: { providers: ProviderListing[] }) {
       <h2 id="providers-title" className="px-5 pt-5 text-xs font-semibold tracking-wider text-muted uppercase">
         Providers
       </h2>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="mt-3 w-full min-w-[520px] text-sm">
           <thead>
             <tr className="border-b border-border text-xs text-muted">

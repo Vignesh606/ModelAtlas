@@ -28,7 +28,7 @@ export function HeroStats({ stats }: { stats: CatalogStats }) {
         ))}
       </dl>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <figure className="rounded-xl border border-border bg-bg p-4">
           <figcaption className="flex items-baseline justify-between gap-2">
             <span className="text-sm font-medium">Releases per month</span>

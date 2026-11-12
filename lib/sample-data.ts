@@ -35,6 +35,9 @@ type SampleModel = z.infer<typeof sampleModelSchema>;
 
 const sampleModels: SampleModel[] = z.array(sampleModelSchema).parse(rawSampleModels);
 
+/** Ids of the brief's sample models, used for prerendering and as compare suggestions. */
+export const SAMPLE_MODEL_IDS: readonly string[] = sampleModels.map((m) => m.id);
+
 const LAB_NAMES: Record<string, string> = {
   openai: "OpenAI",
   deepseek: "DeepSeek",

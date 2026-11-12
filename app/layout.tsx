@@ -9,7 +9,7 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 // Prices and numbers
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-// Serif display face, used for the hero headline only
+// Serif display face for headlines and section titles (matches the reference design)
 const newsreader = Newsreader({ variable: "--font-newsreader", subsets: ["latin"] });
 
 export const metadata: Metadata = {

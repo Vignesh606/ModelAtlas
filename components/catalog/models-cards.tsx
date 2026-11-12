@@ -13,11 +13,11 @@ import type { ModelSummary } from "@/lib/types";
  */
 export function ModelsCards({ rows }: { rows: ModelSummary[] }) {
   return (
-    <ul className="grid gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-3">
       {rows.map((m) => (
         <li
           key={m.id}
-          className="relative flex flex-col gap-4 rounded-xl border border-border bg-bg p-4 transition-colors duration-150 hover:border-border-strong"
+          className="relative flex min-w-0 flex-col gap-4 rounded-xl border border-border bg-bg p-4 transition-colors duration-150 hover:border-border-strong"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">

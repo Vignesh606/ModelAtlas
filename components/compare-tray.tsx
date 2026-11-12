@@ -29,8 +29,9 @@ export function CompareTray() {
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface shadow-card"
       >
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <p className="hidden shrink-0 text-sm font-medium sm:block">
-            Compare <span className="font-mono text-muted tabular-nums">{items.length}/{MAX_COMPARE}</span>
+          <p className="shrink-0 text-sm font-medium">
+            <span className="max-sm:sr-only">Compare </span>
+            <span className="font-mono text-muted tabular-nums">{items.length}/{MAX_COMPARE}</span>
           </p>
           <ul className="flex min-w-0 flex-1 gap-2 overflow-x-auto py-0.5">
             {items.map((item) => (
@@ -51,7 +52,7 @@ export function CompareTray() {
               </li>
             ))}
           </ul>
-          <button type="button" onClick={clearCompareItems} className={buttonClasses("ghost", "sm", "hidden sm:inline-flex")}>
+          <button type="button" onClick={clearCompareItems} className={buttonClasses("ghost", "sm", "max-sm:hidden")}>
             Clear
           </button>
           {missing > 0 ? (

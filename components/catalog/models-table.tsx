@@ -44,7 +44,9 @@ export function ModelsTable({
 
   return (
     // Horizontal scroll on narrow screens; the model column stays pinned.
-    <div className="-mx-4 overflow-x-auto sm:-mx-5">
+    // `relative` makes this the containing block for absolutely positioned
+    // children (e.g. sr-only labels), so they are clipped instead of widening the page.
+    <div className="relative -mx-4 overflow-x-auto sm:-mx-5">
       <table className="w-full min-w-[760px] text-sm">
         <thead>
           <tr className="border-b border-border text-xs text-muted">

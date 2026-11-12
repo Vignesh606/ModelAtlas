@@ -18,7 +18,7 @@ export function SectionHeading({
     <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
       <div className="space-y-1">
         <p className="text-xs font-semibold tracking-wider text-muted uppercase">{eyebrow}</p>
-        <h2 id={id} className="text-xl font-semibold tracking-tight sm:text-2xl">
+        <h2 id={id} className="font-display text-2xl tracking-tight sm:text-3xl">
           {title}
         </h2>
         {description ? <p className="text-sm text-muted">{description}</p> : null}

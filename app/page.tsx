@@ -6,11 +6,11 @@ import { CatalogSkeleton } from "@/components/catalog/catalog-skeleton";
 import { HeroStats } from "@/components/hero-stats";
 import { SectionHeading } from "@/components/section-heading";
 import { buttonClasses } from "@/components/ui/button";
-import { listLabs, parseCatalogParams } from "@/lib/catalog";
+import { listLabs, parseCatalogParams, serializeCatalogParams } from "@/lib/catalog";
 import { getCatalog } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { computeStats } from "@/lib/stats";
-import type { Model, ModelSummary } from "@/lib/types";
+import { toSummary } from "@/lib/summary";
 
 /*
  * Rendering: the hero only uses cached catalog data, so it is part of the
@@ -69,14 +69,19 @@ async function Hero() {
   );
 }
 
-/** Strips long text fields before sending the list to the client island. */
-function toSummary(model: Model): ModelSummary {
-  const { description, supportedParameters, ...summary } = model;
-  return summary;
-}
-
 async function CatalogLoader({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
   const [catalog, params] = await Promise.all([getCatalog(), searchParams]);
   const models = catalog.models.map(toSummary);
-  return <Catalog models={models} labs={listLabs(models)} initialState={parseCatalogParams(params)} />;
+  const initialState = parseCatalogParams(params);
+  // Next keeps visited pages mounted (<Activity>), so client state would
+  // survive a navigation to a different URL. Keying on the URL state remounts
+  // the island whenever the server renders different filters.
+  return (
+    <Catalog
+      key={serializeCatalogParams(initialState)}
+      models={models}
+      labs={listLabs(models)}
+      initialState={initialState}
+    />
+  );
 }

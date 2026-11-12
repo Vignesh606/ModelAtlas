@@ -11,7 +11,7 @@ export default function Loading() {
         </div>
       </div>
       <div className="h-24 rounded-2xl bg-surface-2" />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {Array.from({ length: 4 }, (_, i) => (
           <div key={i} className="h-44 rounded-2xl bg-surface-2" />
         ))}
