@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.next/**)",
+      "Read(./package-lock.json)",
+      "Read(./drizzle/meta/**)",
+      "Read(./*.tsbuildinfo)",
+      "Read(./next-env.d.ts)",
+      "Read(./.env.local)",
+      "Read(./.env)"
+    ]
+  }
+}
