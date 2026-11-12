@@ -1,0 +1,47 @@
+[
+  {
+    "id": "openai/gpt-6.1-terra",
+    "name": "GPT-6.1 Terra",
+    "lab": "openai",
+    "description": "Fast, efficient model for visual reasoning, precise computer use, and natural writing.",
+    "context": 1050000,
+    "input": ["text", "image", "pdf"],
+    "output": ["text"],
+    "cost": { "input": 1.0, "output": 5.0, "cacheRead": 0.05, "cacheWrite": 1.25 },
+    "lowestInput": 1.0,
+    "intelligence": 48.1,
+    "coding": 52.4,
+    "agentic": 45.0,
+    "providers": ["azure", "commandcode", "together", "openrouter"]
+  },
+  {
+    "id": "deepseek/deepseek-v4.1-flash-uncensored",
+    "name": "DeepSeek V4.1 Flash",
+    "lab": "deepseek",
+    "description": "Ultra high-throughput model optimized for code execution, mathematical reasoning, and agent loops.",
+    "context": 1000000,
+    "input": ["text", "image"],
+    "output": ["text"],
+    "cost": { "input": 0.33, "output": 1.32, "cacheRead": 0.008, "cacheWrite": null },
+    "lowestInput": 0.33,
+    "intelligence": 46.2,
+    "coding": 54.1,
+    "agentic": 43.8,
+    "providers": ["deepinfra", "fireworks", "groq", "together"]
+  },
+  {
+    "id": "anthropic/claude-35-sonnet",
+    "name": "Claude 3.5 Sonnet",
+    "lab": "anthropic",
+    "description": "Industry-leading reasoning, coding, and multi-modal comprehension.",
+    "context": 200000,
+    "input": ["text", "image"],
+    "output": ["text"],
+    "cost": { "input": 3.0, "output": 15.0, "cacheRead": 0.3, "cacheWrite": 3.75 },
+    "lowestInput": 3.0,
+    "intelligence": 51.2,
+    "coding": 58.7,
+    "agentic": 49.3,
+    "providers": ["aws-bedrock", "gcp-vertex", "openrouter"]
+  }
+]

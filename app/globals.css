@@ -1,26 +1,111 @@
 @import "tailwindcss";
 
+/*
+ * Theming strategy
+ * ----------------
+ * Every color is a CSS variable. Components only reference semantic tokens
+ * (bg-surface, text-muted, border-border...), so the same markup works in both
+ * themes and we almost never need `dark:` variants.
+ *
+ * The active theme is set as `data-theme="light|dark"` on <html> by an inline
+ * script in the root layout *before* first paint (no flash of the wrong theme).
+ * Contrast of every text/background pair below was checked against WCAG AA
+ * (>= 4.5:1 for text, >= 3:1 for the focus ring).
+ */
+
+/* Make Tailwind's `dark:` variant follow our attribute instead of the OS query. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --bg: #f8f7f4; /* warm off-white page */
+  --surface: #ffffff; /* cards */
+  --surface-2: #f1efea; /* hover / subtle fills */
+  --border: #e4e1db; /* hairlines */
+  --border-strong: #d2cec6;
+  --fg: #1c1b19;
+  --muted: #67635b; /* 5.6:1 on --bg */
+  --primary: #1c1b19; /* primary buttons are neutral, never colored */
+  --primary-fg: #f8f7f4;
+  --accent: #1d7a53; /* muted emerald: badges + focus ring only */
+  --accent-soft: #e3f1ea;
+  --chart: #87827a; /* neutral bars: 3.6:1 on --bg (>= 3:1 for graphics) */
+  --card-shadow: 0 1px 2px rgb(28 27 25 / 0.04), 0 1px 3px rgb(28 27 25 / 0.06);
 }
 
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1c1b19; /* warm charcoal */
+  --surface: #262523;
+  --surface-2: #302e2b;
+  --border: #3a3835;
+  --border-strong: #4a4844;
+  --fg: #f2f0ec;
+  --muted: #a9a59d; /* 7.0:1 on --bg */
+  --primary: #f2f0ec;
+  --primary-fg: #1c1b19;
+  --accent: #6cc29b;
+  --accent-soft: #23332b;
+  --chart: #85817a; /* 4.4:1 on --bg */
+  --card-shadow: none; /* shadows only in light mode */
+}
+
+/* Expose the variables to Tailwind as utilities: bg-surface, text-muted, ... */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-chart: var(--chart);
+
+  --shadow-card: var(--card-shadow);
+
+  /* Font variables are injected by next/font in app/layout.tsx */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    background-color: var(--bg);
+    color: var(--fg);
+  }
+
+  /* Hairline borders by default, matching the restrained look. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  /* One consistent focus ring for every interactive element. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--accent-soft);
+    color: var(--fg);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Respect users who ask for less motion: neutralise all transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
