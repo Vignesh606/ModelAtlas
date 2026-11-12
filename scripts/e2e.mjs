@@ -192,7 +192,7 @@ try {
     await box.fill("");
 
     // Bring-your-own-key: a wrong key gives a friendly 401, and the key is never persisted.
-    await page.getByLabel("OpenRouter API key").fill("sk-or-fake");
+    await page.getByLabel("OpenRouter API key").fill(["sk-or", "v1", "0".repeat(64)].join("-"));
     await box.fill("hello");
     await box.press("Enter");
     const alert = page.getByRole("article").last().getByRole("alert"); // scoped: Next also renders a role=alert route announcer
