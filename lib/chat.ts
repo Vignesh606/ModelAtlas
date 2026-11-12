@@ -1,15 +1,16 @@
 import { z } from "zod";
 import { API_ERROR_CODES, type ApiErrorBody } from "@/lib/api-error";
+import { PROVIDER_IDS } from "@/lib/providers";
 
 /*
  * The contract between the playground and POST /api/chat, shared by both sides.
  *
- * Request: JSON validated by `chatRequestSchema`. A user's own OpenRouter key
- * travels in the `x-openrouter-key` header (kept out of the body so it is never
+ * Request: JSON validated by `chatRequestSchema`. A user's own provider key
+ * travels in the `x-provider-key` header (kept out of the body so it is never
  * part of anything we might log or store).
  *
  * Response: Server-Sent Events, one JSON `ChatEvent` per `data:` line. We
- * normalize OpenRouter's chunks into these few events so the client never
+ * normalize the provider's chunks into these few events so the client never
  * depends on the upstream format.
  */
 
@@ -21,7 +22,7 @@ export const CHAT_LIMITS = {
   maxOutputTokens: 8_192,
 } as const;
 
-export const USER_KEY_HEADER = "x-openrouter-key";
+export const USER_KEY_HEADER = "x-provider-key";
 
 const messageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -30,7 +31,10 @@ const messageSchema = z.object({
 
 export const chatRequestSchema = z
   .object({
-    model: z.string().trim().min(3, "Choose a model.").max(200),
+    /** Which API to call: OpenRouter (the catalog) unless the user connected another provider. */
+    provider: z.enum(PROVIDER_IDS).default("openrouter"),
+    /** The provider's own model id, e.g. "openai/gpt-4o" on OpenRouter or "gpt-4o" on OpenAI. */
+    model: z.string().trim().min(2, "Choose a model.").max(200).regex(/^[\w.:/@-]+$/, "Invalid model id."),
     messages: z
       .array(messageSchema)
       .min(1, "Send at least one message.")
@@ -50,10 +54,9 @@ export const chatRequestSchema = z
   .strict();
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
+/** What the client sends (provider may be omitted). */
+export type ChatRequestInput = z.input<typeof chatRequestSchema>;
 export type ChatMessage = z.infer<typeof messageSchema>;
-
-/** Shape check for a user-supplied OpenRouter key. */
-export const userKeySchema = z.string().regex(/^sk-or-[A-Za-z0-9_-]{10,200}$/);
 
 /*
  * Response-side schemas. The browser validates every event it receives, so a
@@ -68,7 +71,7 @@ const usageSchema = z.object({
   promptTokens: z.number(),
   completionTokens: z.number(),
   totalTokens: z.number(),
-  /** USD charged by OpenRouter for this request, when reported. */
+  /** USD charged for this request, when the provider reports it (OpenRouter does). */
   cost: z.number().nullable(),
 });
 

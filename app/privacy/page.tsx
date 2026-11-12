@@ -60,7 +60,7 @@ export default function PrivacyPage() {
 
         <Section title="Third parties">
           <p>
-            Playground prompts are forwarded to OpenRouter (and the model provider it routes to) to generate replies.
+            Playground prompts are forwarded to OpenRouter (and the model provider it routes to), or to the provider whose key you added, to generate replies.
             Data is stored in a Postgres database hosted by Neon. The site is hosted on Vercel.
           </p>
         </Section>

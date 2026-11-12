@@ -38,6 +38,7 @@ Next.js server (Vercel functions) ───────────────�
 - **Data**: `lib/data.ts` fetches OpenRouter's public model list on the server and validates it with zod. It's cached with `"use cache"` + `cacheLife("hours")`. On failure the app serves sample data, cached for minutes only so it recovers quickly.
 - **Rendering**: Cache Components (partial prerendering). Static parts like the hero are prerendered. Anything that reads the URL, cookies or the database streams in behind `<Suspense>` with skeleton fallbacks.
 - **Chat**: `/api/chat` turns OpenRouter's stream into four normalized events (`delta`, `reasoning`, `done` with usage and latency, `error`). The client never depends on the upstream format. Errors before streaming use real status codes (400/401/402/429/502/504); errors after streaming starts arrive as events.
+- **Providers**: besides OpenRouter, the playground can call OpenAI, Anthropic, Google Gemini, Groq, DeepSeek, Mistral, xAI, Together and Fireworks through their OpenAI-compatible endpoints (`lib/providers.ts`). The user pastes their own key in Settings, and `/api/provider-models` lists the models that key can use. These providers publish no prices, so cost projection only shows when the provider reports cost.
 
 ## State management
 

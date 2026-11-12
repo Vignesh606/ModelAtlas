@@ -7,7 +7,7 @@ import {
   chatEventSchema,
   type ChatError,
   type ChatMessage,
-  type ChatRequest,
+  type ChatRequestInput,
   type ChatUsage,
 } from "@/lib/chat";
 import type { ChatModel } from "@/lib/playground";
@@ -107,8 +107,9 @@ export function useChat({ model, settings, apiKey }: { model: ChatModel; setting
       ]);
 
       const supports = (param: string) => model.supportedParameters.includes(param);
-      const request: ChatRequest = {
-        model: model.id,
+      const request: ChatRequestInput = {
+        provider: model.provider,
+        model: model.upstreamId,
         messages: toWire(history),
         ...(settings.system.trim() ? { system: settings.system.trim() } : {}),
         ...(settings.temperature !== null && supports("temperature") ? { temperature: settings.temperature } : {}),

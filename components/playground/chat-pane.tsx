@@ -53,9 +53,13 @@ export function ChatPane({
             <BrandLogo labName={model.labName} />
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-sm font-medium">
-                <Link href={modelHref(model.id)} className="truncate rounded hover:underline">
-                  {model.name}
-                </Link>
+                {model.provider === "openrouter" ? (
+                  <Link href={modelHref(model.id)} className="truncate rounded hover:underline">
+                    {model.name}
+                  </Link>
+                ) : (
+                  <span className="truncate">{model.name}</span>
+                )}
                 {isFree(model) ? <Badge tone="outline">Free</Badge> : null}
               </p>
               <p className="truncate font-mono text-xs text-muted">{model.id}</p>

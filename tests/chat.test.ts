@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { CHAT_LIMITS, chatRequestSchema, userKeySchema, type ChatEvent } from "@/lib/chat";
+import { CHAT_LIMITS, chatRequestSchema, type ChatEvent } from "@/lib/chat";
 import { mapUpstreamError } from "@/lib/chat-errors";
 import { createChatStream, type CompletionRecord } from "@/lib/chat-stream";
 import { projectMonthlyCost } from "@/lib/cost";
-import { pickDefaultModel } from "@/lib/playground";
+import { parseProviderModels, pickDefaultModel } from "@/lib/playground";
+import { isValidKey } from "@/lib/providers";
 import { checkRateLimit, resetRateLimits } from "@/lib/rate-limit";
 import { getSampleModels } from "@/lib/sample-data";
 import { createSseParser } from "@/lib/sse";
@@ -48,10 +49,28 @@ describe("chatRequestSchema", () => {
     expect(chatRequestSchema.safeParse(body).success).toBe(false);
   });
 
-  it("validates user key shape", () => {
-    expect(userKeySchema.safeParse("sk-or-v1-abcdef0123456789").success).toBe(true);
-    expect(userKeySchema.safeParse("sk-ant-123").success).toBe(false);
-    expect(userKeySchema.safeParse("sk-or-<script>").success).toBe(false);
+  it("defaults the provider to OpenRouter and rejects unknown providers", () => {
+    expect(chatRequestSchema.parse(valid).provider).toBe("openrouter");
+    expect(chatRequestSchema.safeParse({ ...valid, provider: "evil" }).success).toBe(false);
+  });
+
+  it("validates user key shape per provider", () => {
+    expect(isValidKey("openrouter", "sk-or-v1-abcdef0123456789")).toBe(true);
+    expect(isValidKey("openrouter", "sk-ant-123")).toBe(false);
+    expect(isValidKey("openrouter", "sk-or-<script>")).toBe(false);
+    expect(isValidKey("anthropic", "sk-ant-api03-abcdef0123456789")).toBe(true);
+    expect(isValidKey("openai", "sk-proj abc")).toBe(false); // spaces never allowed
+  });
+});
+
+describe("parseProviderModels", () => {
+  it("reads {data} and bare-array lists, strips Gemini's prefix and skips non-chat models", () => {
+    const gemini = parseProviderModels("gemini", { data: [{ id: "models/gemini-pro" }, { id: "models/text-embedding-004" }] });
+    expect(gemini.map((m) => [m.id, m.upstreamId])).toEqual([["gemini:gemini-pro", "gemini-pro"]]);
+    const together = parseProviderModels("together", [{ id: "a/chat", type: "chat", context_length: 8000 }, { id: "b/emb", type: "embedding" }]);
+    expect(together).toHaveLength(1);
+    expect(together[0]).toMatchObject({ provider: "together", context: 8000, pricing: { input: null } });
+    expect(parseProviderModels("openai", "nonsense")).toEqual([]);
   });
 });
 
@@ -80,6 +99,7 @@ describe("mapUpstreamError", () => {
   it("tailors the 401 message to whose key failed", () => {
     expect(mapUpstreamError(401, null, true).message).toContain("Your OpenRouter API key");
     expect(mapUpstreamError(401, null, false).message).toContain("server's");
+    expect(mapUpstreamError(401, null, true, "Groq").message).toContain("Your Groq API key");
   });
 });
 

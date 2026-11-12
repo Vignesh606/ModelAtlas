@@ -9,6 +9,7 @@ import { SettingsPanel } from "@/components/playground/settings-panel";
 import { useChat, type ChatSettings } from "@/components/playground/use-chat";
 import { Button, buttonClasses } from "@/components/ui/button";
 import type { ChatModel } from "@/lib/playground";
+import type { ProviderId } from "@/lib/providers";
 
 interface Props {
   models: ChatModel[];
@@ -20,26 +21,34 @@ interface Props {
 
 /*
  * State: conversations live in two useChat hooks (pane B is idle unless
- * side-by-side is on). Settings and the optional API key are plain React
- * state, so the key exists only in this tab's memory: no localStorage, no
+ * side-by-side is on). Settings and the optional API keys (one per provider)
+ * are plain React state, so keys exist only in this tab's memory: no localStorage, no
  * cookie, gone on reload.
  */
-export function Playground({ models, initialModelId, secondModelId, serverHasKey }: Props) {
+export function Playground({ models: catalogModels, initialModelId, secondModelId, serverHasKey }: Props) {
+  // Catalog (OpenRouter) models plus any loaded from providers the user connected.
+  const [providerModels, setProviderModels] = useState<ChatModel[]>([]);
+  const models = [...catalogModels, ...providerModels];
   const byId = new Map(models.map((m) => [m.id, m]));
   const fallback = models[0];
   const [modelA, setModelA] = useState<ChatModel | undefined>(byId.get(initialModelId) ?? fallback);
   const [modelB, setModelB] = useState<ChatModel | undefined>(byId.get(secondModelId) ?? fallback);
   const [sideBySide, setSideBySide] = useState(false);
   const [settings, setSettings] = useState<ChatSettings>({ system: "", temperature: null, maxTokens: null });
-  const [apiKey, setApiKey] = useState("");
+  const [keys, setKeys] = useState<Partial<Record<ProviderId, string>>>({});
+  const keyFor = (model: ChatModel | undefined) => keys[(model ?? fallback!).provider] ?? "";
 
   // Hooks can't be conditional, so both exist; `fallback` guarantees a model object.
-  const chatA = useChat({ model: modelA ?? fallback!, settings, apiKey });
-  const chatB = useChat({ model: modelB ?? fallback!, settings, apiKey });
+  const chatA = useChat({ model: modelA ?? fallback!, settings, apiKey: keyFor(modelA) });
+  const chatB = useChat({ model: modelB ?? fallback!, settings, apiKey: keyFor(modelB) });
+
+  /** Replaces this provider's models with a freshly loaded list. */
+  const onModelsLoaded = (provider: ProviderId, loaded: ChatModel[]) =>
+    setProviderModels((all) => [...all.filter((m) => m.provider !== provider), ...loaded]);
 
   // Keep ?model= in sync in single mode, so the page can be bookmarked or shared.
   useEffect(() => {
-    if (!modelA || sideBySide) return;
+    if (!modelA || sideBySide || modelA.provider !== "openrouter") return;
     const url = `${window.location.pathname}?model=${encodeURIComponent(modelA.id)}`;
     if (`${window.location.pathname}${window.location.search}` !== url) window.history.replaceState(null, "", url);
   }, [modelA, sideBySide]);
@@ -109,8 +118,9 @@ export function Playground({ models, initialModelId, secondModelId, serverHasKey
             models={sideBySide ? [modelA, modelB] : [modelA]}
             settings={settings}
             onSettingsChange={setSettings}
-            apiKey={apiKey}
-            onApiKeyChange={setApiKey}
+            keys={keys}
+            onKeyChange={(provider, key) => setKeys((k) => ({ ...k, [provider]: key }))}
+            onModelsLoaded={onModelsLoaded}
             serverHasKey={serverHasKey}
           />
         </aside>

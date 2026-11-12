@@ -1,12 +1,72 @@
+import { z } from "zod";
 import { isFree } from "@/lib/catalog";
+import { PROVIDERS, type ProviderId } from "@/lib/providers";
 import { toSummary } from "@/lib/summary";
 import type { Model, ModelSummary } from "@/lib/types";
 
-/** What the playground needs per model: the summary plus the parameters it accepts. */
-export type ChatModel = ModelSummary & { supportedParameters: string[] };
+/**
+ * What the playground needs per model: the summary, the parameters it accepts,
+ * and where to send it. `id` is unique across providers ("openai:gpt-4o");
+ * `upstreamId` is what the provider itself calls the model ("gpt-4o").
+ */
+export type ChatModel = ModelSummary & { supportedParameters: string[]; provider: ProviderId; upstreamId: string };
 
 export function toChatModel(model: Model): ChatModel {
-  return { ...toSummary(model), supportedParameters: model.supportedParameters };
+  return { ...toSummary(model), supportedParameters: model.supportedParameters, provider: "openrouter", upstreamId: model.id };
+}
+
+/** Lenient shape of a provider's GET /models reply: `{ data: [...] }` or a bare array (Together). */
+const providerModelsSchema = z.union([
+  z.object({ data: z.array(z.unknown()) }).transform((r) => r.data),
+  z.array(z.unknown()),
+]);
+const providerModelSchema = z.object({
+  id: z.string(),
+  display_name: z.string().nullish(), // Anthropic
+  type: z.string().nullish(), // Together: "chat", "embedding"...
+  context_length: z.number().nullish(),
+  context_window: z.number().nullish(), // Groq
+});
+
+/** Ids that are clearly not chat models (embeddings, speech, images...). */
+const NOT_CHAT = /embed|whisper|tts|dall-e|moderation|image|audio|transcribe|rerank|realtime|guard/i;
+
+/**
+ * Turns a provider's /models list into playground models. Other providers
+ * publish no prices or benchmarks, so those stay null (no cost projection).
+ */
+export function parseProviderModels(provider: ProviderId, body: unknown): ChatModel[] {
+  const list = providerModelsSchema.safeParse(body);
+  if (!list.success) return [];
+  const models: ChatModel[] = [];
+  for (const item of list.data) {
+    const parsed = providerModelSchema.safeParse(item);
+    if (!parsed.success) continue;
+    const raw = parsed.data;
+    const upstreamId = raw.id.replace(/^models\//, ""); // Gemini prefixes ids with "models/"
+    if (NOT_CHAT.test(upstreamId) || (raw.type && !/chat|language/.test(raw.type))) continue;
+    models.push({
+      id: `${provider}:${upstreamId}`,
+      upstreamId,
+      provider,
+      name: raw.display_name ?? upstreamId,
+      lab: provider,
+      labName: PROVIDERS[provider].name,
+      context: raw.context_length ?? raw.context_window ?? null,
+      maxOutput: null,
+      input: ["text"],
+      output: ["text"],
+      pricing: { input: null, output: null, cacheRead: null, cacheWrite: null },
+      releasedAt: null,
+      expiresAt: null,
+      capabilities: { reasoning: false, tools: false, vision: false, openWeights: false },
+      supportedParameters: ["temperature", "max_tokens"],
+      benchmarks: { intelligence: null, coding: null, agentic: null },
+      providers: [],
+      source: "live",
+    });
+  }
+  return models.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Models the playground can call: live on OpenRouter and able to output text. */

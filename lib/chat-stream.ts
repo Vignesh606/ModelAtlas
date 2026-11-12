@@ -3,7 +3,7 @@ import { encodeEvent, type ChatEvent, type ChatUsage } from "@/lib/chat";
 import { createSseParser } from "@/lib/sse";
 
 /*
- * Transforms OpenRouter's SSE stream into our normalized ChatEvent stream.
+ * Transforms an OpenAI-compatible SSE stream (OpenRouter or any provider) into our normalized ChatEvent stream.
  * Kept free of Next.js imports so it can be unit-tested with a fake stream.
  */
 
@@ -13,8 +13,8 @@ const chunkSchema = z.object({
     .array(
       z.object({
         delta: z
-          .object({ content: z.string().nullish(), reasoning: z.string().nullish() })
-          
+          // `reasoning` is OpenRouter's name; DeepSeek and xAI use `reasoning_content`.
+          .object({ content: z.string().nullish(), reasoning: z.string().nullish(), reasoning_content: z.string().nullish() })
           .nullish(),
         finish_reason: z.string().nullish(),
       }),
@@ -22,9 +22,10 @@ const chunkSchema = z.object({
     .nullish(),
   usage: z
     .object({
-      prompt_tokens: z.number(),
-      completion_tokens: z.number(),
-      total_tokens: z.number(),
+      // Lenient: some providers send partial usage objects mid-stream.
+      prompt_tokens: z.number().nullish(),
+      completion_tokens: z.number().nullish(),
+      total_tokens: z.number().nullish(),
       cost: z.number().nullish(),
     })
     .nullish(),
@@ -92,17 +93,18 @@ export function createChatStream(upstream: ReadableStream<Uint8Array>, options: 
           return;
         }
         const choice = chunk.choices?.[0];
-        if (choice?.delta?.reasoning) emit({ type: "reasoning", text: choice.delta.reasoning });
+        const reasoning = choice?.delta?.reasoning ?? choice?.delta?.reasoning_content;
+        if (reasoning) emit({ type: "reasoning", text: reasoning });
         if (choice?.delta?.content) {
           text += choice.delta.content;
           emit({ type: "delta", text: choice.delta.content });
         }
         if (choice?.finish_reason) finishReason = choice.finish_reason;
-        if (chunk.usage) {
+        if (chunk.usage?.prompt_tokens != null && chunk.usage.completion_tokens != null) {
           usage = {
             promptTokens: chunk.usage.prompt_tokens,
             completionTokens: chunk.usage.completion_tokens,
-            totalTokens: chunk.usage.total_tokens,
+            totalTokens: chunk.usage.total_tokens ?? chunk.usage.prompt_tokens + chunk.usage.completion_tokens,
             cost: chunk.usage.cost ?? null,
           };
         }
@@ -141,7 +143,7 @@ export function createChatStream(upstream: ReadableStream<Uint8Array>, options: 
       }
     },
     async cancel() {
-      // Client disconnected: stop reading upstream so OpenRouter stops generating (and billing).
+      // Client disconnected: stop reading upstream so the provider stops generating (and billing).
       await reader.cancel().catch(() => {});
       await finish({ status: "aborted", errorMessage: "client disconnected" });
     },

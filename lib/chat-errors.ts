@@ -1,7 +1,7 @@
 import type { ApiErrorCode } from "@/lib/api-error";
 
 /**
- * Maps an OpenRouter error status to our normalized error, with a message a
+ * Maps a provider error status to our normalized error, with a message a
  * user can act on. Statuses follow OpenRouter's documented meanings:
  * 400 bad request, 401 bad key, 402 no credits, 403 moderation, 408 timeout,
  * 429 rate limited, 502 model down, 503 no provider available.
@@ -10,25 +10,28 @@ export function mapUpstreamError(
   status: number,
   upstreamMessage: string | null,
   usingUserKey: boolean,
+  providerName = "OpenRouter",
 ): { code: ApiErrorCode; status: number; message: string } {
   const detail = upstreamMessage ? ` (${upstreamMessage.slice(0, 200)})` : "";
   switch (status) {
     case 400:
+    case 404: // OpenAI-style "model not found"
+    case 422: // validation error (Mistral)
       return { code: "invalid_request", status: 400, message: `The model rejected the request${detail}.` };
     case 401:
       return usingUserKey
-        ? { code: "unauthorized", status: 401, message: "Your OpenRouter API key was rejected. Check it in Settings." }
+        ? { code: "unauthorized", status: 401, message: `Your ${providerName} API key was rejected. Check it in Settings.` }
         : {
             code: "unauthorized",
             status: 401,
-            message: "The server's OpenRouter key was rejected. Add your own key in Settings to continue.",
+            message: `The server's ${providerName} key was rejected. Add your own key in Settings to continue.`,
           };
     case 402:
       return {
         code: "payment_required",
         status: 402,
         message: usingUserKey
-          ? "Your OpenRouter account is out of credits. Add credits or pick a free model."
+          ? `Your ${providerName} account is out of credits.`
           : "The shared key is out of credits. Pick a free model or add your own key in Settings.",
       };
     case 403:
@@ -64,7 +67,8 @@ export function mapUpstreamError(
 /** Reads `{ error: { message } }` from an upstream error body, tolerating non-JSON bodies. */
 export async function readUpstreamErrorMessage(response: Response): Promise<string | null> {
   try {
-    const body: unknown = await response.json();
+    let body: unknown = await response.json();
+    if (Array.isArray(body)) body = body[0]; // Gemini wraps errors in an array
     if (typeof body === "object" && body !== null && "error" in body) {
       const error = (body as { error: unknown }).error;
       if (typeof error === "object" && error !== null && "message" in error) {

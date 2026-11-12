@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useId, useState, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import type { ChatSettings } from "@/components/playground/use-chat";
-import { CHAT_LIMITS } from "@/lib/chat";
+import { Button } from "@/components/ui/button";
+import { CHAT_LIMITS, USER_KEY_HEADER, apiErrorBodySchema } from "@/lib/chat";
 import { formatContext, formatPrice } from "@/lib/format";
 import type { ChatModel } from "@/lib/playground";
+import { PROVIDER_IDS, PROVIDERS, type ProviderId } from "@/lib/providers";
 import { modelHref } from "@/lib/routes";
 
 /**
- * Model info, request parameters and the optional bring-your-own-key field.
+ * Model info, request parameters and the optional bring-your-own-key fields.
  * Parameters only appear if at least one active model supports them; each
  * request then only includes what its own model accepts.
  */
@@ -18,19 +20,20 @@ export function SettingsPanel({
   models,
   settings,
   onSettingsChange,
-  apiKey,
-  onApiKeyChange,
+  keys,
+  onKeyChange,
+  onModelsLoaded,
   serverHasKey,
 }: {
   models: ChatModel[];
   settings: ChatSettings;
   onSettingsChange: (settings: ChatSettings) => void;
-  apiKey: string;
-  onApiKeyChange: (key: string) => void;
+  keys: Partial<Record<ProviderId, string>>;
+  onKeyChange: (provider: ProviderId, key: string) => void;
+  onModelsLoaded: (provider: ProviderId, models: ChatModel[]) => void;
   serverHasKey: boolean;
 }) {
   const id = useId();
-  const [showKey, setShowKey] = useState(false);
   const supportsTemperature = models.some((m) => m.supportedParameters.includes("temperature"));
   const supportsMaxTokens = models.some((m) => m.supportedParameters.includes("max_tokens"));
   const set = (patch: Partial<ChatSettings>) => onSettingsChange({ ...settings, ...patch });
@@ -41,9 +44,13 @@ export function SettingsPanel({
         <ul className="space-y-3">
           {models.map((m) => (
             <li key={m.id} className="text-sm">
-              <Link href={modelHref(m.id)} className="font-medium hover:underline">
-                {m.name}
-              </Link>
+              {m.provider === "openrouter" ? (
+                <Link href={modelHref(m.id)} className="font-medium hover:underline">
+                  {m.name}
+                </Link>
+              ) : (
+                <span className="font-medium">{m.name}</span>
+              )}
               <dl className="mt-1 grid grid-cols-3 gap-2 text-xs">
                 <div>
                   <dt className="text-muted">Context</dt>
@@ -141,39 +148,114 @@ export function SettingsPanel({
         </div>
       </Card>
 
-      <Card title="Your API key (optional)">
-        <label htmlFor={`${id}-key`} className="sr-only">
-          OpenRouter API key
-        </label>
-        <div className="flex gap-2">
-          <input
-            id={`${id}-key`}
-            type={showKey ? "text" : "password"}
-            value={apiKey}
-            onChange={(e) => onApiKeyChange(e.target.value.trim())}
-            placeholder="sk-or-..."
-            autoComplete="off"
-            spellCheck={false}
-            className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-bg px-3 font-mono text-sm placeholder:text-muted hover:border-border-strong"
-          />
-          <button
-            type="button"
-            onClick={() => setShowKey((s) => !s)}
-            aria-label={showKey ? "Hide key" : "Show key"}
-            aria-pressed={showKey}
-            className="inline-flex size-9 items-center justify-center rounded-lg border border-border text-muted transition-colors duration-150 hover:text-fg"
-          >
-            {showKey ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-muted">
-          {serverHasKey
+      <ProviderKeys keys={keys} onKeyChange={onKeyChange} onModelsLoaded={onModelsLoaded} serverHasKey={serverHasKey} />
+    </div>
+  );
+}
+
+/**
+ * Pick a provider, paste its key, and (for non-OpenRouter providers) load the
+ * models that key can use. Loaded models appear in the model switcher.
+ */
+function ProviderKeys({
+  keys,
+  onKeyChange,
+  onModelsLoaded,
+  serverHasKey,
+}: {
+  keys: Partial<Record<ProviderId, string>>;
+  onKeyChange: (provider: ProviderId, key: string) => void;
+  onModelsLoaded: (provider: ProviderId, models: ChatModel[]) => void;
+  serverHasKey: boolean;
+}) {
+  const id = useId();
+  const [provider, setProvider] = useState<ProviderId>("openrouter");
+  const [showKey, setShowKey] = useState(false);
+  const [status, setStatus] = useState<{ loading: boolean; message: string }>({ loading: false, message: "" });
+  const { name, keyHint } = PROVIDERS[provider];
+  const key = keys[provider] ?? "";
+
+  const loadModels = async () => {
+    setStatus({ loading: true, message: "Loading models..." });
+    try {
+      const res = await fetch(`/api/provider-models?provider=${provider}`, { headers: { [USER_KEY_HEADER]: key } });
+      const body: unknown = await res.json();
+      if (!res.ok) {
+        const parsed = apiErrorBodySchema.safeParse(body);
+        return setStatus({ loading: false, message: parsed.success ? parsed.data.error.message : "Couldn't load models." });
+      }
+      // Our own API, typed by the route; checked loosely to stay simple.
+      const models = (body as { models: ChatModel[] }).models;
+      onModelsLoaded(provider, models);
+      setStatus({ loading: false, message: `Loaded ${models.length} ${name} models. Pick one in the model switcher.` });
+    } catch {
+      setStatus({ loading: false, message: "Network error. Try again." });
+    }
+  };
+
+  return (
+    <Card title="API keys (optional)">
+      <label htmlFor={`${id}-provider`} className="text-sm font-medium">
+        Provider
+      </label>
+      <select
+        id={`${id}-provider`}
+        value={provider}
+        onChange={(e) => {
+          setProvider(e.target.value as ProviderId);
+          setStatus({ loading: false, message: "" });
+        }}
+        className="mt-1.5 mb-3 h-9 w-full rounded-lg border border-border bg-bg px-2 text-sm hover:border-border-strong"
+      >
+        {PROVIDER_IDS.map((p) => (
+          <option key={p} value={p}>
+            {PROVIDERS[p].name}
+          </option>
+        ))}
+      </select>
+      <label htmlFor={`${id}-key`} className="sr-only">
+        {name} API key
+      </label>
+      <div className="flex gap-2">
+        <input
+          id={`${id}-key`}
+          type={showKey ? "text" : "password"}
+          value={key}
+          onChange={(e) => onKeyChange(provider, e.target.value.trim())}
+          placeholder={keyHint}
+          autoComplete="off"
+          spellCheck={false}
+          className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-bg px-3 font-mono text-sm placeholder:text-muted hover:border-border-strong"
+        />
+        <button
+          type="button"
+          onClick={() => setShowKey((s) => !s)}
+          aria-label={showKey ? "Hide key" : "Show key"}
+          aria-pressed={showKey}
+          className="inline-flex size-9 items-center justify-center rounded-lg border border-border text-muted transition-colors duration-150 hover:text-fg"
+        >
+          {showKey ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+        </button>
+      </div>
+      {provider !== "openrouter" ? (
+        <Button variant="secondary" size="sm" className="mt-2" onClick={loadModels} disabled={!key || status.loading}>
+          Load models
+        </Button>
+      ) : null}
+      {status.message ? (
+        <p role="status" className="mt-2 text-xs">
+          {status.message}
+        </p>
+      ) : null}
+      <p className="mt-2 text-xs text-muted">
+        {provider !== "openrouter"
+          ? `Paste your ${name} key, then load its models. `
+          : serverHasKey
             ? "Leave empty to use the shared key (free models). "
             : "Required: this deployment has no shared key. "}
-          Your key stays in this tab&apos;s memory, is sent only with your requests, and is never stored or logged.
-        </p>
-      </Card>
-    </div>
+        Keys stay in this tab&apos;s memory, are sent only with your requests, and are never stored or logged.
+      </p>
+    </Card>
   );
 }
 
